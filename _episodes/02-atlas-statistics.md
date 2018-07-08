@@ -143,6 +143,65 @@ Object (23 properties)
 ~~~
 {:. .output}
 
+## Getting Statistics for Regions
+
+The method that we have laid out produces statistics for an entire image. However, it is also possible for us to get statistics for a defined region, such as a country or a custom geometry. When we make our `.reduceRegion` call, we will also provide a geometry to perform the reduction over.
+
+Let's start by drawing a polygon on the map. This geometry is now available to us as `geometry`. That's the only difference between the methods: we're now providing a geometry for the reduction.
+~~~
+// Make sure to draw a custom geometry on the map!
+var regionalAreas = atlasV2_2013.reduceRegion({
+    reducer: ee.Reducer.frequencyHistogram(),
+    region: geometry,
+    scale: 30,
+    maxPixels: 1e13
+  })
+regionalAreas = ee.Dictionary(regionalAreas.get('b1'))
+  .map(function(key, value) {
+    return ee.Number(value).multiply(0.0009)
+  })
+
+print('regional areas', regionalAreas)
+~~~
+{:. .source .language-javascript}
+
+We can also perform regions over predefined geometries, like country boundaries. One great collection of country boundaries is the US DoS's Large-Scale International Boundary collection. We can import it as a feature collection:
+~~~
+var countryBoundaries = ee.FeatureCollection('USDOS/LSIB/2013')
+~~~
+{:. .source .language-javascript}
+This collection is too large to display in the console (>5000 elements), but we can explore it further by adding it to the map and using the inspector or by printing an aggregate histogram of the collection.
+~~~
+Map.addLayer(countryBoundaries)
+print(countryBoundaries.aggregate_histogram('name'))
+~~~
+{:. .source .language-javascript}
+
+We're going to filter the collection with the `.filter()` method. When we filter a collection, we pass the method an `ee.Filter` object. In this case, we're going to use the `equals` filter, which only returns those features whose property 'name', is equal to the second parameter. We'll do Niger, feel free to try out a different country.
+
+~~~
+// Get boundaries for a single country
+var countryGeometry = countryBoundaries.filter(ee.Filter.equals('name', 'NIGER'))
+Map.addLayer(countryGeometry)
+~~~
+{:. .source}
+
+Using a country as the region for a reduction is not any different that using our custom geometry:
+~~~
+var regionalAreas = atlasV2_2013.reduceRegion({
+    reducer: ee.Reducer.frequencyHistogram(),
+    region: countryGeometry,
+    scale: 30,
+    maxPixels: 1e13
+  })
+regionalAreas = ee.Dictionary(regionalAreas.get('b1'))
+  .map(function(key, value) {
+    return ee.Number(value).multiply(0.0009)
+  })
+print('country areas', regionalAreas)
+~~~
+{:. .source .language-javascript}
+
 ## Display Area as Bar Chart
 
 Let's display the class counts as a bar chart, using the `ui.Chart.feature` methods. `ui.Chart.feature` displays a `ee.FeatureCollection`, so let's convert our dictionary of areas into a feature and put that feature in a feature collection.
@@ -182,9 +241,19 @@ var chartLabels = nameDictionaryFrench.select(chartInput.propertyNames()).getInf
 We would like our scale to be logarithmic, so we will set that option for the vertical axis.
 ~~~
 var areaChart = ui.Chart.feature.byProperty(ee.FeatureCollection(chartInput), chartLabels)
+~~~
+{:. .code .language-javascript}
+It would be nice if we could style our chart a little bit. We can set a number of options for our chart; more information is available on the Google Charts page (but be aware that not all functionality in Google Charts is available in Earth Engine).
+
+We're going to use `.setOptions` to label our X and Y axes, and to set our Y axis to logarithmic scale.
+~~~
   .setOptions({
-      vAxis: {
-        scaleType: 'log'
+    vAxis: {
+      title: 'km^2',
+      scaleType: 'log'
+    },
+    hAxis: {
+      title: 'Class'
     }
   })
 print(areaChart)
@@ -267,9 +336,9 @@ print(areaChart)
 
 Now that we have statistics for a single year, let's get statistics for the entire Atlas V2 collection. We will map over the `atlasV2Collection`, converting each image into a feature. We can then export that collection, or use it to plot time series charts.
 
-First, we need to create a function that gets an image's class counts. This will take a collection of classified images and a conversion factor to use to convert pixel counts to areas.
+First, we need to create a function that gets an image's class counts. This will take a collection of classified images and a conversion factor to use to convert pixel counts to areas. The function will also take a geometry to perform the reduction over. If no geometry is provided, this value will be `undefined`, and thus will default to the footprint of the images.
 ~~~
-function getCollectionAreas(imageCollection, conversionFactor) {
+function getCollectionAreas(imageCollection, conversionFactor, reductionGeometry) {
   imageCollection = ee.ImageCollection(imageCollection)
   var areaCollection = imageCollection.map(function(image) {
 ~~~
@@ -279,6 +348,7 @@ Inside the body of our `.map` function, we're going to do exactly what we did be
 ~~~
     var pixelCounts = image.reduceRegion({
         reducer: ee.Reducer.frequencyHistogram(),
+        geometry: reductionGeometry,
         maxPixels: 1e13
       })
       .get('b1')
@@ -361,7 +431,47 @@ print(meanAreaAtlasV2)
 ~~~
 {:. .source .language-javascript}
 
-## Time series statistics
+## Time Series Charts
+Now that we have class areas for each year in our series we can create time series charts of class areas.
+
+Earlier, we created a chart with `ui.Chart.byProperty`; now we are going to use `ui.Chart.byFeature`.
+
+We'll use the same method as before to get our dictionary of series labels.
+~~~
+chartInput = atlasV2Areas
+chartLabels = nameDictionaryFrench.select(chartInput.get('classes')).getInfo()
+~~~
+{:. .source .language-javascript}
+
+We want our chart to be a line chart, instead of the default column chart.
+~~~
+var timeSeriesChart = ui.Chart.feature.byFeature(chartInput)
+  .setChartType('LineChart')
+~~~
+{:. .source .language-javascript}
+We pass the names of the classes a little bit differently:
+~~~
+  .setSeriesNames(chartLabels)
+~~~
+{:. .source .language-javascript}  
+And now we set the chart options.
+~~~
+.setOptions({
+    vAxis: {
+      title: 'km^2',
+      scaleType: 'log'
+    },
+    hAxis: {
+      title: 'year'
+    }
+  })
+  print(timeSeriesChart)
+~~~
+{:. .source .language-javascript}
+
+
+## Exporting Data
+Now that we've produced statistics for our images, let's export them from Earth Engine. Earth Engine allows you to export feature collections to Google Drive. 
 
 ### Class Areas as a function
 For convenience, let's write a function to convert pixel counts to class areas. `countsToAreas` will take a reducer output, gets its `b1` property, and multiply all of its values by a `conversionCoefficient`.

@@ -4,24 +4,56 @@ var displayAtlasClassification = workshopTools.displayAtlasClassification
 var atlasV2_2013 = ee.Image('users/svangordon/conference/atlas_v2/classify/2013')
 var atlasV2Collection = workshopTools.atlasV2Collection
 
-var statsAtlasV2_2013 = atlasV2_2013.reduceRegion({
+var imageReduction = atlasV2_2013.reduceRegion({
     reducer: ee.Reducer.frequencyHistogram(),
     scale: 30,
     maxPixels: 1e13
   })
-print("atlasV2 stats 2013", statsAtlasV2_2013)
+print("atlasV2 stats 2013", imageReduction)
 
-var pixelCounts = ee.Dictionary(statsAtlasV2_2013.get('b1'))
+var pixelCounts = ee.Dictionary(imageReduction.get('b1'))
 
 // Multiply the counts by the conversion coefficient
-var areasAtlasV2_2013 = pixelCounts
+var classAreas = pixelCounts
   .map(function(key, value) {
     return ee.Number(value).multiply(0.0009)
   })
 
-print(areasAtlasV2_2013)
+print(classAreas)
 
-var chartInput = ee.Feature(null, areasAtlasV2_2013)
+/*
+  Reduce a region.
+*/
+// Make sure to draw a custom geometry on the map!
+var regionalAreas = atlasV2_2013.reduceRegion({
+    reducer: ee.Reducer.frequencyHistogram(),
+    geometry: geometry,
+    scale: 30,
+    maxPixels: 1e13
+  })
+regionalAreas = ee.Dictionary(regionalAreas.get('b1'))
+  .map(function(key, value) {
+    return ee.Number(value).multiply(0.0009)
+  })
+
+print('regional areas', regionalAreas)
+
+// Perform a reduction for a country.
+
+// Load the LSIB country boundary collection.
+var countryBoundaries = ee.FeatureCollection('USDOS/LSIB/2013')
+Map.addLayer(countryBoundaries)
+print('country names', countryBoundaries.aggregate_histogram('name'))
+
+// Get boundaries for a single country
+var countryGeometry = countryBoundaries.filter(ee.Filter.equals('name', 'NIGER'))
+Map.addLayer(countryGeometry)
+
+/*
+  Display a chart
+*/
+
+var chartInput = ee.Feature(null, classAreas)
 
 var atlasClassMetadata = require('users/svangordon/lulc-conference:atlasClassMetadata')
 var nameDictionaryFrench = atlasClassMetadata.nameDictionaryFrench
@@ -31,16 +63,21 @@ var chartLabels = nameDictionaryFrench.select(chartInput.propertyNames()).getInf
 var areaChart = ui.Chart.feature.byProperty(ee.FeatureCollection(chartInput), chartLabels)
   .setOptions({
       vAxis: {
+        title: 'km^2',
         scaleType: 'log'
-    }
-  })
+      },
+      hAxis: {
+        title: 'Class'
+      }
+    })
 print(areaChart)
 
-function getCollectionAreas(imageCollection, conversionCoefficient) {
+function getCollectionAreas(imageCollection, conversionCoefficient, reductionGeometry) {
   imageCollection = ee.ImageCollection(imageCollection)
   var areaCollection = imageCollection.map(function(image) {
     var pixelCounts = image.reduceRegion({
         reducer: ee.Reducer.frequencyHistogram(),
+        geometry: reductionGeometry,
         maxPixels: 1e13
       })
       .get('b1')
@@ -64,3 +101,20 @@ print("meanForestArea", meanForestArea)
 var atlasV2Classes = atlasV2Areas.get('classes')
 var meanAreaAtlasV2 = atlasV2Areas.reduceColumns(ee.Reducer.mean().forEach(atlasV2Classes), atlasV2Areas.get('classes'))
 print(meanAreaAtlasV2)
+
+chartInput = atlasV2Areas
+chartLabels = nameDictionaryFrench.select(chartInput.get('classes')).getInfo()
+
+var timeSeriesChart = ui.Chart.feature.byFeature(chartInput)
+  .setChartType('LineChart')
+  .setSeriesNames(chartLabels)
+  .setOptions({
+      vAxis: {
+        title: 'km^2',
+        scaleType: 'log'
+      },
+      hAxis: {
+        title: 'year'
+      }
+    })
+print(timeSeriesChart)
