@@ -28,6 +28,39 @@ var nameDictionaryFrench = atlasClassMetadata.nameDictionaryFrench
 
 var chartLabels = nameDictionaryFrench.select(chartInput.propertyNames()).getInfo()
 
-var chart = ui.Chart.feature.byProperty(ee.FeatureCollection(chartInput), chartLabels)
+var areaChart = ui.Chart.feature.byProperty(ee.FeatureCollection(chartInput), chartLabels)
+  .setOptions({
+      vAxis: {
+        scaleType: 'log'
+    }
+  })
+print(areaChart)
 
-print(chart)
+function getCollectionAreas(imageCollection, conversionCoefficient) {
+  imageCollection = ee.ImageCollection(imageCollection)
+  var areaCollection = imageCollection.map(function(image) {
+    var pixelCounts = image.reduceRegion({
+        reducer: ee.Reducer.frequencyHistogram(),
+        maxPixels: 1e13
+      })
+      .get('b1')
+    var classAreas = ee.Dictionary(pixelCounts)
+      .map(function(key, value) {
+        return ee.Number(value).multiply(conversionCoefficient)
+      })
+    return ee.Feature(null, classAreas)
+  })
+  areaCollection = ee.FeatureCollection(areaCollection)
+    .set('classes', ee.Feature(areaCollection.first()).toDictionary().keys())
+  return areaCollection
+}
+var atlasV2Collection = ee.ImageCollection('users/svangordon/conference/atlas_v2/collections/classify')
+var atlasV2Areas = getCollectionAreas(atlasV2Collection, 0.0009)
+print(atlasV2Areas)
+
+var meanForestArea = atlasV2Areas.aggregate_mean("1")
+print("meanForestArea", meanForestArea)
+
+var atlasV2Classes = atlasV2Areas.get('classes')
+var meanAreaAtlasV2 = atlasV2Areas.reduceColumns(ee.Reducer.mean().forEach(atlasV2Classes), atlasV2Areas.get('classes'))
+print(meanAreaAtlasV2)

@@ -179,6 +179,7 @@ var chartLabels = nameDictionaryFrench.select(chartInput.propertyNames()).getInf
 > The `.getInfo()` method converts an Earth Engine object on the Google server into a local JavaScript object. It is similar to the `print()` function: both make a request to the Earth Engine servers, and return a value. But while the `print()` function gets a value and displays it in the console, `.getInfo()` makes it available in the code. Furthermore, `.getInfo` halts the execution of our script while waiting for the Earth Engine servers to return a value. Because it pauses the running of your script, use `.getInfo()` sparingly. We mostly only need it when we need to provide a local function, such as `Map.addLayer` or `ui.Chart`, with a value that we need to calculate from Earth Engine objects.
 {:. .callout}
 
+We would like our scale to be logarithmic, so we will set that option for the vertical axis.
 ~~~
 var areaChart = ui.Chart.feature.byProperty(ee.FeatureCollection(chartInput), chartLabels)
   .setOptions({
@@ -243,12 +244,12 @@ print(areaChart)
 > ~~~
 > {:. .source .language-javascript}
 > > ## Solution
-> > We need to change our scale from 30 to 2000 (30m scale to 2km scale). We must also change our conversion coefficient from 0.0009 to 4.
+> > We must change our conversion coefficient from 0.0009 to 4, as we are going from (30m scale to 2km scale).
 > > ~~~
 > > var atlasImage = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
 > > var atlasClassCounts = atlasImage.reduceRegion({
 > >     reducer: ee.Reducer.frequencyHistogram(),
-> >     scale: 30,
+> >     // scale: 30,
 > >    maxPixels: 1e13
 > >   })
 > >   .get('b1')
@@ -264,7 +265,103 @@ print(areaChart)
 }
 ## Time series data
 
+Now that we have statistics for a single year, let's get statistics for the entire Atlas V2 collection. We will map over the `atlasV2Collection`, converting each image into a feature. We can then export that collection, or use it to plot time series charts.
 
+First, we need to create a function that gets an image's class counts. This will take a collection of classified images and a conversion factor to use to convert pixel counts to areas.
+~~~
+function getCollectionAreas(imageCollection, conversionFactor) {
+  imageCollection = ee.ImageCollection(imageCollection)
+  var areaCollection = imageCollection.map(function(image) {
+~~~
+{:. .source .language-javascript}
+
+Inside the body of our `.map` function, we're going to do exactly what we did before with our Atlas V2 image.
+~~~
+    var pixelCounts = image.reduceRegion({
+        reducer: ee.Reducer.frequencyHistogram(),
+        maxPixels: 1e13
+      })
+      .get('b1')
+    var classAreas = ee.Dictionary(pixelCounts)
+      .map(function(key, value) {
+        return ee.Number(value).multiply(conversionCoefficient)
+      })
+    return ee.Feature(null, classAreas)  
+  })
+~~~
+{:. .source .language-javascript}
+We must return the results as an `ee.Feature` (with a null geometry) because an `ee.FeatureCollection` can only contain images and features
+
+When we try and display a chart later on, we will need to know what classes are present in the feature collection. So, let's add the classes of the first feature in the collection as a property that we can reference later. We will take the first element in the collection that we just took, convert it to a dictionary and get its keys.
+
+~~~
+  areaCollection = ee.FeatureCollection(areaCollection)
+    .set('classes', ee.Feature(areaCollection.first()).toDictionary().keys())
+  return areaCollection
+}
+~~~
+{:. .source}
+
+
+Let's take a look:
+~~~
+var atlasV2Collection = ee.ImageCollection('users/svangordon/conference/atlas_v2/collections/classify')
+print(getCollectionAreas(atlasV2Collection, 0.0009))
+~~~
+{:. .source}
+~~~
+FeatureCollection users/svangordon/conference/atlas_v2/collections/classify (17 elements, 0 columns)
+  type: FeatureCollection
+  id: users/svangordon/conference/atlas_v2/collections/classify
+  version: 1530943502012404
+  columns: Object (0 properties)
+  features: List (17 elements)
+    0: Feature 2000
+      type: Feature
+      id: 2000
+      geometry: null
+      properties: Object (23 properties)
+        1: 723.816
+        10: 177733.31579999998
+        11: 44079.2838
+        12: 92509.6356
+        13: 3528.756
+        14: 5168.469599999999
+        15: 7843.4136
+        2: 1005695.6229
+        21: 156.0501
+        ...
+~~~
+{:. .output}
+
+Outstanding!
+
+We can get aggregate statistics for our collection of areas. `ee.FeatureCollection` has several aggregator methods available. For example, we could see the average area of the `Forest` class, which is class `2`:
+~~~
+var meanForestArea = atlasV2Areas.aggregate_mean("2")
+print('meanForestArea', meanForestArea)
+~~~
+{:. .source .language-javascript}
+~~~
+meanForestArea
+920922.5752411763
+~~~
+{:. .output}
+
+We can also perform these reductions over multiple columns at once using `reduceColumns`. For example, we can produce the mean value of each land cover class. To use reduce columns, we need to provide the names of the columns we are interested in. If you are only interest in certain columns, you can provide them as a list, or you can use the `classes` property that we set on our collection earlier.
+
+Here, we reduce the collection to the mean value for each land cover type. We tell Earth Engine that we want to do the reduction separately for each class, and that we want to do it for every class in our list of classes.
+~~~
+var atlasV2Classes = atlasV2Areas.get('classes')
+var meanAreaAtlasV2 = atlasV2Areas.reduceColumns(
+  ee.Reducer.mean().forEach(atlasV2Classes),
+  atlasV2Areas.get('classes')
+)
+print(meanAreaAtlasV2)
+~~~
+{:. .source .language-javascript}
+
+## Time series statistics
 
 ### Class Areas as a function
 For convenience, let's write a function to convert pixel counts to class areas. `countsToAreas` will take a reducer output, gets its `b1` property, and multiply all of its values by a `conversionCoefficient`.
@@ -338,14 +435,14 @@ The `.reduceRegion()` method has a `maxPixels` argument; by default it is `10000
 
 `maxPixels` is really just a 'guard'. Google will let you process a large number of pixels with a reducer, but they want to make sure that you're intending to process so many pixels. You can actually process a very large number of pixels, as many as 1e13 to 1e15, depending on the exact method. All that is needed is to 'ask permission' by passing a `maxPixels` value greater than the number of pixels in the image you are reducing. So, let's try that reduction again with a max pixel value of `1e13`.
 
-Let's also provide a scale parameter. It's a good habit to explicitly provide Earth Engine with a scale to perform reductions at.
+<!-- Let's also provide a scale parameter. It's a good habit to explicitly provide Earth Engine with a scale to perform reductions at. -->
 
 {% highlight javascript %}
 // Get the Atlas v2 frequency histogram and display it.
 var reductionAtlas2013v2 = atlas2013v2.reduceRegion({
   reducer: ee.Reducer.frequencyHistogram(),
   maxPixels: 1e13,
-  scale: 30
+  <!-- scale: 30 -->
 })
 print('Atlas v2 2013 Pixel Counts', reductionAtlas2013v2)
 {% endhighlight %}
