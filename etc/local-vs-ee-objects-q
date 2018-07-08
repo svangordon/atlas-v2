@@ -1,0 +1,21 @@
+> ## Local vs Earth Engine Objects
+>
+> `atlasV2Years` is a local JavaScript object.
+> * How can you tell?
+>
+> * How would we create the list of years as an Earth Engine object? Fill in the blank:
+>
+> ~~~
+> print(ee._____(atlasV2Years))
+> ~~~
+> {:. .source .language-javascript}
+>
+> * `.iterate` is a function that performs similarly to `forEach`. If you cast `atlasV2Years` to an Earth Engine object and replace`.forEach` with `.iterate`, you will get an error. Why? Hint: Try commenting out different bits of code inside the `.iterate` function.
+>
+> > ## Solution
+> >
+> > * Earth Engine objects are created using `ee.ObjectType()` syntax
+> > * We would use a list function. Eg, atlasV2Years = ee.List(atlasV2Years)
+> > * The `.iterate` call takes place on Earth Engine servers, but `Map.addLayer` can only take place on local machines. If you use a function like `print` or `Map.addLayer` in a function that is running on the server, such as in an `.iterate` or `.map` method, there will be an error.
+> {:. .solution}
+{:. .challenge}

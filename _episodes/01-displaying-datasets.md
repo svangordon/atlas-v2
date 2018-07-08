@@ -151,7 +151,7 @@ Map.addLayer(remappedImage, {min:1, max:26, palette: atlasPalette}, 'Atlas Class
 > ## Challenge
 >
 > * What would the map look like if we didn't remap the image?
-> * If you wanted to add another class, for example a class with a value of 100 and a color of "#343434", how would you do it?
+> * If you wanted to add another class, for example a class with a value of `100` and a color of `"#343434"`, how would you do it?
 > * [A MODIS color palette can be found here](https://lpdaac.usgs.gov/about/news_archive/modisterra_land_cover_types_yearly_l3_global_005deg_cmg_mod12c1). Try changing the Atlas palette so that it has the same colors as the MODIS dataset.
 {:. .challenge}
 
@@ -213,7 +213,7 @@ But there's another way that we can do this. We can create a list of dates and i
 > ## Duplicating text in the Editor
 >
 > It's a little time consuming to write out so many dates, but we can speed the process along by selecting a section of the code that you'd like to duplicate and pressing <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>.
-{:. callout}
+{:. .callout}
 
 ~~~
 function displayClassificationCollection(classificationCollection) {  
@@ -253,23 +253,7 @@ displayClassificationCollection(atlasV2Collection)
 > ## Observing land cover changes with Atlas V2
 >
 > With the entire Atlas V2 dataset displayed in the map, you can enable and disable different layers to see land cover changes over time. Let's spend a little time to look through the map. Maybe go to an area that you know well, or that you are interested in. What ways do you think that the Atlas V2 dataset might be useful? In what ways do you think that it needs to be improved?
-
-> ## Local vs Earth Engine Objects
-
->`atlasV2Years` is a local JavaScript object.
->* How can you tell?
->* How would we create the list of years as an Earth Engine object? Fill in the blank:
-~~~
-ee._____(atlasV2Years)
-~~~
->* `.iterate` is a function that performs similarly to `forEach`. If you cast `atlasV2Years` to an Earth Engine object and replace`.forEach` with `.iterate`, you will get an error. Why? Hint: Try commenting out different bits of code inside the `.iterate` function.
-
-
-> ## Solution
->
-> * Earth Engine objects are created using `ee.ObjectType()` syntax
-> * We would use a list function. Eg, atlasV2Years = ee.List(atlasV2Years)
-> * The `.iterate` call takes place on Earth Engine servers, but `Map.addLayer` can only take place on local machines. If you use a function like `print` or `Map.addLayer` in a function that is running on the server, such as in an `.iterate` or `.map` method, there will be an error.
+{:. .challenge}
 
 
 ## Adding scripts to a repository
