@@ -4,37 +4,38 @@ teaching: 5
 exercises: 0
 questions:
 - "How do we determine how much of a certain class is in an image?"
-- "How can we get statistics for different areas?"
-- "What are the differences between getting pixel counts and getting class areas?"
-- "What is maxPixelCount? What do we do when we have a maxPixelCount error?"
+- "How can we get statistics for different countries and geometries?"
 objectives:
 - "Get pixel counts for an image."
-- "Get pixel counts for a custom area."
+- "Get pixel counts for a custom geometry."
 - "Get pixel counts for a country."
 keypoints:
--
+- Regional statistics can be calculated with the frequencyHistogram Reducer
+- Country boundaries can be loaded from EE assets and Fusion Tables.
 ---
 
 ## Basic image statistics
 
 In our last exercise, we rendered the Atlas and Atlas v2 images to the Earth Engine map. We will now explore ways to get more detailed statistics about the classifications.
 
-We'll start by performing some statistical analysis on the Atlas dataset, including class areas and class histograms. This dataset is easier to work with, because it has fewer pixels. We'll look at getting statistics for custom geometries as well as at the national level. Then, we'll use those methods on the Atlas V2 dataset, and learn how to adjust our methods for that dataset. Using the Atlas V2 dataset, we'll look at some more complex measures, like statistics for land cover class conversion. Finally, we'll look at a way to display which Atlas pixels were correctly classified in Atlas V2.
+We'll start by performing some statistical analysis on the Atlas dataset, including class areas and class histograms. This dataset is easier to work with, because it has fewer pixels. We'll look at getting statistics for custom geometries as well as at the national level. Then, we'll use those methods on the Atlas V2 dataset, and learn how to adjust our methods for that dataset. Using the Atlas V2 dataset, we'll look at some more complex measures, like statistics for land cover class conversion.
 
 ## Setup
 
-Let's import some tools and datasets from the workshop tools.
-{% highlight javascript %}
+Let's import some of the tools that we created last episode and saved in our workshop tools, and import some of the Atlas datasets.
+~~~
 // Import tools and datasets from workshopTools. Make sure to put in your own user name!
 var workshopTools = require('users/svangordon/lulc-conference:workshopTools')
 var displayAtlasClassification = workshopTools.displayAtlasClassification
-var atlas_2013 = workshopTools.atlas_2013
+var atlasV2_2013 = ee.Image('users/svangordon/conference/atlas_v2/classify/2013')
 var atlasV2Collection = workshopTools.atlasV2Collection
-{% endhighlight %}
+
+~~~
+{:. .source .language-javascript}
 
 ## Spatial Reductions
 
-To get statistics about the Atlas and Atlas V2 data, we are going to use the `.reduceRegion` method. As you may recall, reducers can be used in a number of ways. ImageCollection reductions can aggregate a collection of images into a single image. FeatureCollection reductions provide a way to get statistics about a FeatureCollection. And a region reduction with `.reduceRegion` provides us with a way to get statistics about regions in an image.
+To get statistics about the Atlas and Atlas V2 data, we are going to use the `.reduceRegion` method. `.reduceRegion` provides a way to calculate a value or values from a region of an image.
 
 <img src="../fig/02-reduce-region-diagram.png" border="10" >
 _Diagram of .reduceRegion_
@@ -44,33 +45,50 @@ Let's go ahead and reduce one of our Atlas images. There are a number of `ee.Red
 <img src="../fig/02-image-reduce-region-docs.png" border="10" >
 _Documentation for ee.Image().reduceRegion()_
 
-We won't pass a geometry or scale; by default, the reduction is made over the footprint of the entire image and at the scale of the image's first band (2000). So, this will produce a reduction over the image's entire area.
-{% highlight javascript %}
-// Reduce an atlas image
-var atlasStats_2013 = atlas_2013.reduceRegion(ee.Reducer.frequencyHistogram())
-print('Atlas Stats, 2013', atlasStats_2013)
-{% endhighlight %}
+~~~
+var statsAtlasV2_2013 = atlasV2_2013.reduceRegion({
+    reducer: ee.Reducer.frequencyHistogram(),
+    scale: 30,
+    maxPixels: 1e13
+  })
+print("atlasV2 stats 2013", statsAtlasV2_2013)
+~~~
+{:. .source .language-javascript}
+~~~
+~~~
+atlasV2 stats 2013
+JSON
+Object (1 property)
+  b1: Object (23 properties)
+    1: 792622
+    10: 207088161
+    11: 46751150
+    12: 94575778
+    13: 4024559
+    14: 9682372
+    15: 14261712
+    2: 970680921
+    ...
+~~~
+{:. .output}
+We didn't pass a geometry, so the reduction happens over the entire area of the image. The Atlas V2 dataset is at 30m scale, so we used that as the scale parameter.
 
-<img src="../fig/02-atlas-v1-2013-stats.png" border = "10">
-_Result of Atlas 2013 region-wide reduction._
-
-You may notice that we're returning an object with one property, `b1`. `b1` is our class band; if we were reducing an image with more than one class, our reducer's output would have more than one property. But since, we're dealing with only one band, we can  simplify things by getting property `b1` of our reducer output.
-
-Try changing `atlasStats_2013` to
-{% highlight javascript %}
-var atlasStats_2013 = atlas_2013.reduceRegion(ee.Reducer.frequencyHistogram()).get('b1')
-{% endhighlight %}
+In the output, you can see that we're returning an object with one property, `b1`. That is the class band for the image; if the image had more than one band, those bands would be present as well.
 
 ### Converting Counts to Areas
-The `.frequencyHistogram()` reducer gives a count of pixels, not a total area. To convert pixel counts to area, we can multiply the pixel counts by an appropriate conversion coefficient: `4` for Atlas (`1 pixel == 4km^2`); `0.0009` for Atlas V2 (`1 pixel == 0.0009km^2`).
+The `.frequencyHistogram()` reducer gives a count of pixels, not a total area. To convert pixel counts to area, we can multiply the pixel counts by an appropriate conversion coefficient: `4` for Atlas (`1 pixel == 4km^2`); `0.0009` for Atlas V2 (`1 pixel == 0.0009km^2`). We will multiply our vales by 0.0009, in this example
 
-{% highlight javascript %}
+~~~
+var conversionCoefficient = 0.0009
+// Get the `b1` histogram
+var pixelCounts = ee.Dictionary(statsAtlasV2_2013.get('b1'))
 // Multiply the counts by the conversion coefficient
-var atlasAreas_2013 = ee.Dictionary(atlasStats_2013)
-.map(function(key, value) {
-  return ee.Number(value).multiply(conversionCoefficient)
-})
-{% endhighlight %}
+var atlasAreas_2013 = pixelCounts
+  .map(function(key, value) {
+    return ee.Number(value).multiply(conversionCoefficient)
+  })
+~~~
+{:. .source .language-javascript}
 
 <img src="../fig/02-atlas-2013-areas.png" border = "10">
 
@@ -79,6 +97,12 @@ Let's check whether our numbers make sense by taking a look at the [summary stat
 <img src="../fig/02_eros_summary_stats_2013.png" border = "10">
 
 Looks like it adds up. `Open Mine`, for example, is class 78; both have 1200 km of area in 2013.
+
+> ## reduceRegion Max Pixels
+>
+> * What happens if we don't pass a `maxPixels` argument?
+{:. .challenge}
+> ##
 
 ### Class Areas as a function
 For convenience, let's write a function to convert pixel counts to class areas. `countsToAreas` will take a reducer output, gets its `b1` property, and multiply all of its values by a `conversionCoefficient`.

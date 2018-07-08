@@ -18,7 +18,13 @@ keypoints:
 ## Loading as `ee.Image`
 The Atlas and Atlas V2 datasets are available as Earth Engine assets. User `svangordon/` currently hosts them in the folder `conference`.
 
+You can view the assets in the conference folder with this link:
+https://code.earthengine.google.com/?asset=users/svangordon/conference
+
 Atlas images are in the folder `'users/svangordon/conference/atlas/'`. The Atlas images have the same filenames as the original files hosted by USGS.
+
+**Using the assets tab, import the Atlas images, give them the names below**
+
 ~~~
 var atlas_1975 = ee.Image('users/svangordon/conference/atlas/swa_1975lulc_2km')
 var atlas_2000 = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
@@ -60,7 +66,7 @@ Image users/svangordon/conference/atlas_v2/classify/2016 (1 band)
 {: .output}
 
 ## Loading as `ee.ImageCollection`
-Both Atlas and Atlas V2 datasets are available as `ImageCollections`.
+Both Atlas and Atlas V2 datasets are available as `ImageCollections`. Load the image collection or import it from the assets tab.
 ~~~
 var atlasCollection = ee.ImageCollection('users/svangordon/conference/atlas/atlasCollection')
 var atlasV2Collection = ee.ImageCollection('users/svangordon/conference/atlas_v2/collections/classify')
@@ -142,7 +148,12 @@ Map.addLayer(remappedImage, {min:1, max:26, palette: atlasPalette}, 'Atlas Class
 ~~~
 {: source .language-javascript}
 
-<!-- Possible challenge: What would the map look like if we didn't remap? If we had a map with different classes, how would we change this code? -->
+> ## Challenge
+>
+> * What would the map look like if we didn't remap the image?
+> * If you wanted to add another class, for example a class with a value of 100 and a color of "#343434", how would you do it?
+> * [A MODIS color palette can be found here](https://lpdaac.usgs.gov/about/news_archive/modisterra_land_cover_types_yearly_l3_global_005deg_cmg_mod12c1). Try changing the Atlas palette so that it has the same colors as the MODIS dataset.
+{:. .challenge}
 
 ## Displaying an `ImageCollection`
 It would be convenient to display the Atlas or Atlas V2 classification for each year in a collection. Let's first create a function to render an Atlas or Atlas V2 image for us. This function will take a classified `ee.Image()` and a string to use as the layer name. The function will remap the image and add it to the map.
