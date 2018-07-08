@@ -1,5 +1,5 @@
 ---
-title: "Intro to Atlas and Atlas V2"
+title: "Importing Rasters"
 teaching: 5
 exercises: 30
 questions:

@@ -1,5 +1,5 @@
 ---
-title: "Displaying Atlas and Atlas V2"
+title: "Displaying Maps"
 teaching: 5
 exercises: 30
 questions:
@@ -9,9 +9,10 @@ objectives:
 - Understand how to load Atlas and Atlas V2 datasets into Earth Engine
 - Understand how to visualize Atlas and Atlas V2 images
 keypoints:
-- Atlas and Atlas V2 can be loaded in Earth Engine as `ee.Image()`s
+- Atlas and Atlas V2 can be loaded in Earth Engine as `ee.Image()` and `ee.ImageCollection`
 - Atlas and Atlas V2 maps must be remapped before being displayed
-
+- The entire Atlas V2 dataset can be added to the map
+- Functions like `print` and `Map.addLayer` cannot be used in functions that are running on the server side.
 ---
 
 ## Loading as `ee.Image`

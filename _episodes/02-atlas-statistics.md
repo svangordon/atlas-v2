@@ -11,7 +11,6 @@ objectives:
 - "Get pixel counts for an image."
 - "Get pixel counts for a custom area."
 - "Get pixel counts for a country."
--
 keypoints:
 -
 ---
@@ -26,7 +25,7 @@ We'll start by performing some statistical analysis on the Atlas dataset, includ
 
 Let's import some tools and datasets from the workshop tools.
 {% highlight javascript %}
-// Import tools and datasets from workshopTools
+// Import tools and datasets from workshopTools. Make sure to put in your own user name!
 var workshopTools = require('users/svangordon/lulc-conference:workshopTools')
 var displayAtlasClassification = workshopTools.displayAtlasClassification
 var atlas_2013 = workshopTools.atlas_2013
