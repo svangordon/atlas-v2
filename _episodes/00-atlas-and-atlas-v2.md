@@ -1,33 +1,30 @@
 ---
-title: "Atlas v2 Access in EE"
+title: "Intro to Atlas and Atlas V2?"
 teaching: 5
 exercises: 30
 questions:
-- How do I acquire satellite imagery at regional scales?
-- How can I make image mosaics?
-- How can I use vector data?
-- How do I export images?
+- What are Atlas and Atlas V2?
+- What is the relationship between Atlas and Atlas V2?
+- How was Atlas V2 produced?
+- What are the temporal and spatial scales of these datasets?
 objectives:
-- Learn how to access images based on filter criteria
-- Perform basic image manipulation, mosaicking, and visualization
-- Understand how to map functions across image collections
-- Learn how to export images for later use
+- Understand what the Atlas and Atlas V2 datasets are
+- Understand how it is possible to go from 2km to 30m scale
+- How
 keypoints:
-- Regional satellite data can be accessed by loading a full image collection and filtering based on criteria such as time period and location
-- Images can be manipulated similar to raster math, and new bands can be calculated by mapping functions over image collections
-- Image composites can be generated quite quickly
-- Images can be exported for future use within GEE or for outside software
+- Atlas is a classification of Landsat pixels
+- Atlas V2 uses the Atlas dataset as its labels
+- The Atlas V2 process can be done with different labels and different features
+- Atlas V2 is approximately as accurate as Atlas
 ---
 
-## Overview
-
-We will discuss using Earth Engine to view the Atlas and V2 land cover datasets. In this lesson, we will first introduce the Atlas and Atlas V2 datasets. We will then discuss how to access, display, and get simple information about these datasets.
+The Atlas and Atlas V2 datasets are land cover maps of the West African Sahel. In this lesson, we will discuss these datasets, how they were produced, how they are related, and how you might use them in your map.
 
 ## Description of Datasets
 
 We are going to be talking to you about the Atlas and Atlas V2 datasets.
 
-### Atlas Dataset
+## Atlas Dataset
 
 <img src="../fig/01-atlas-2013.png" border="10" >
 _2013 Atlas Classification_
