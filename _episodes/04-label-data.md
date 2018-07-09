@@ -1,51 +1,28 @@
 ---
-title: "Temporal and Spatial Reducers"
+title: "Sampling Data"
 teaching: 0
 exercises: 0
 questions:
-- How do I aggregate a time series of raster data over a time period?
-- How do I summarize data by vector regions?
-- How do I export tabular data summaries?
+- How do I sample Atlas data?
+- How do I create a testing set and a training set?
+- Are there ways to ensure an balanced split of classes?
 objectives:
-- Use reducers to aggregate a daily image collection to annual values
-- Import vector data to summarize values by polygon regions
-- Use climate data products available through GEE
-- Export tabular data
+- Use `ee.Image.random` and `reduceToVectors` to create sampling points
+- Divide the data into a training set and a testing set.
 keypoints:
-- GEE hosts a wide variety of useful spatial datasets
-- Reducers aggregate or summarize data in space and time
-- There are several ways to use vector data in GEE
-- Results can be exported to Google Drive or Google Cloud
+- Atlas data must be sampled at the centerpoint of each 2km pixel
+- We sample the data by creating a geometry of points, and using that as the geometry for `.sampleRegion`
 ---
 
 Last episode, we talked about how to assemble the training data that we're going to use to train our classifier. Now that we have this data assembled, we need to connect it with our labels, ie, the Atlas data. The Atlas data was produced by classifying individual Landsat pixels in a 2km grid. So, when we sample our Landsat images, we want to be sampling only those landsat pixels that were used to produce the Atlas dataset. Once we have created a feature collection of Atlas centerpoints we want to sample, we will split these geometries into a training set and a testing set. We will then add the Atlas bands to the Landsat image and sample the result, thereby creating the inputs for the classifier.
 
-## Review: Loading and visualizing Atlas v1
+### Loading Training Image
 
-Let us import the Atlas V1 data and display it on the map.
-
-```
-// Load workshop tools and Atlas V1 data
-var workshopTools = require('users/svangordon/lulc-conference:workshopTools')
-var renderClassification = workshopTools.renderClassification
-var atlas_2013 = workshopTools.atlasV1_2013
-var zoneGeometries = workshopTools.zoneGeometries
-var getSeasons = workshopTools.getSeasons
-var landsatCollection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
-var maskLandsatImage = workshopTools.maskLandsatImage
-
-// Create our Landsat image
-var aoi = zoneGeometries[789]
-var timeFilter = getSeasons(2013).get(4)
-var landsatImage = landsatCollection
-  .filterBounds(aoi)
-  .filter(timeFilter)
-  .map(maskLandsatImage);
-  .median()
-
-```
+We will use the code from the previous episode in which we created a Landsat composite image as the starting point. That code is available in Earth Engine here: http://bit.ly/2NAdfW4
 
 ## Getting Image Centerpoints
+
+The Atlas is, essentially, a grid of hand classified Landsat pixels at 2km resolution. To sample it, we want to create a collection of Atlas pixel centerpoints. To do that, we're going to use the same technique as we used to create the classification zones.
 
 We now would like to get the centerpoint of each pixel in our Atlas image.The process is like this:
 * Create an image of random numbers at the same scale and projection as the Atlas image.
