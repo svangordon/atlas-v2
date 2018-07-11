@@ -136,8 +136,9 @@ Then we will map over all of the features, remove their lon/lat coordinates, and
   })
 ~~~
 {:. .source .language-javascript}
-## Creating a Training-Testing
-<!-- <br>
+
+<!-- ## Creating Training and Testing  -->
+<br>
 We now would like to get the centerpoint of each pixel in our Atlas image.The process is like this:
 * Create an image of random numbers at the same scale and projection as the Atlas image.
 * Convert that raster image into a collection of vectors, so that each pixel is converted to a 2km square.
@@ -269,4 +270,4 @@ print(trainingData)
 print(testingData)
 ```
 
-Great! We've got our training and testing data, and we're ready to train our classifier. -->
+Great! We've got our training and testing data, and we're ready to train our classifier.

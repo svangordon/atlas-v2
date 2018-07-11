@@ -5,8 +5,6 @@ var zoneSize = 56000
 var atlasImage = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
 // var labelProjection = atlasImage.projection()
 
-
-
 var classificationZone = ee.Image.random()
   .multiply(10000000)
   .toInt()
@@ -55,11 +53,6 @@ var landsatImage = landsat7Collection
   .filter(getLateYearFilter(2013))
   .map(maskLandsat)
   .median()
-  .clip(classificationZone)
-
-Map.addLayer(landsatImage, {min:0, max:3000, bands: "B3, B2, B1"}, "Landsat Image")
-
-// Code up to this point available at: https://code.earthengine.google.com/d40f69f81e87fba274f804806f8df661
 
 var atlasImage = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
 var labelProjection = atlasImage.projection()
@@ -73,22 +66,10 @@ var samplingPoints = ee.Image
     geometry: classificationZone,
     scale: labelProjection.nominalScale()
   })
-  .aside(function(pixelVectors) {
-    Map.addLayer(pixelVectors, {}, 'vectorized Atlas pixels')
-  })
   .map(function(feature) {
     var centroid = feature.centroid(5)
     return centroid
   })
-
-Map.addLayer(samplingPoints)
-
-var landsatData = landsatImage.sampleRegions({
-  collection: samplingPoints,
-  scale: landsatImage.projection().nominalScale()
-})
-print(landsatData)
-Map.addLayer(landsatData)
 
 function toPoint(feature) {
   feature = ee.Feature(feature)
@@ -96,14 +77,83 @@ function toPoint(feature) {
     ee.Geometry.Point([feature.get('longitude'), feature.get('latitude')]),
     feature.toDictionary().remove(['longitude', 'latitude']))
 }
-
-landsatData = landsatImage
+Map.addLayer(samplingPoints)
+var landsatData = landsatImage
   .addBands(ee.Image.pixelLonLat())
   .addBands(atlasImage)
+  .aside(function(image) {
+    Map.addLayer(image, {min: 0, max: 3000, bands: "B3,B2,B1"})
+  })
+  .sampleRegions({
+    collection: samplingPoints,
+    scale: 30
+  })
   .aside(function(collection) {
     print(collection)
   })
   .map(toPoint)
   .aside(function(collection) {
-    print(collection)
+    print('landsatData with geometries', collection)
   })
+// Code up to this point available at: https://code.earthengine.google.com/df26cb639aa4f06ee6e7c9bb543a4c92
+  .randomColumn('random', 0)
+  .aside(function(collection) {
+    print('collection with random', collection.limit(5))
+  })
+
+// Convert longitude and latitude bands to a geometry.
+var toPoints = function(fc) {
+  return ee.FeatureCollection(fc).map(function(f) {
+    f = ee.Feature(f)
+    return ee.Feature(
+      ee.Geometry.Point([f.get('longitude'), f.get('latitude')]),
+      f.toDictionary().remove(['longitude', 'latitude']))
+  })
+}
+
+var trainingSize = 0.7
+var trainingData = landsatData.filter(ee.Filter.lt('random', trainingSize))
+var testingData = landsatData.filter(ee.Filter.gte('random', trainingSize))
+
+Map.addLayer(trainingData, {color: 'blue'}, 'Training Data')
+Map.addLayer(testingData, {color: 'red'}, 'Testing Data')
+
+var classifier = ee.Classifier.randomForest(20)
+
+var trainingBands = ["B1", "B2", "B3", "B4", "B5", "B7"]
+classifier = classifier.train(trainingData, 'b1', trainingBands)
+
+print(classifier)
+
+var trainingAccuracy = classifier.confusionMatrix().accuracy()
+print('Training Accuracy:', trainingAccuracy)
+
+var testingAccuracy = testingData.classify(classifier).errorMatrix('b1', 'classification').accuracy()
+print('Testing Accuracy:', testingAccuracy)
+
+var testingClasses = ee.Dictionary(testingData.aggregate_histogram('b1'))
+  .keys()
+  .map(function(classValue) {
+    return ee.Number.parse(classValue)
+  })
+  .sort()
+print('testingClasses', testingClasses)
+
+var errorMatrix = testingData.classify(classifier).errorMatrix('b1', 'classification', testingClasses)
+var testingAccuracy = errorMatrix.accuracy()
+print('Testing Accuracy:', testingAccuracy)
+print(errorMatrix)
+
+
+var producersAccuracy = errorMatrix.producersAccuracy()
+print('producersAccuracy', producersAccuracy)
+
+var consumersAccuracy = errorMatrix.consumersAccuracy()
+print('consumersAccuracy', consumersAccuracy)
+
+producersAccuracy = ee.Dictionary.fromLists(
+  testingClasses.map(ee.Algorithms.String),
+  errorMatrix.producersAccuracy().project([0]).toList()
+)
+
+print(producersAccuracy)

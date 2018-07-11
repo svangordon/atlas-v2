@@ -1,7 +1,13 @@
+var waterJrc = ee.Image("JRC/GSW1_0/GlobalSurfaceWater");
 // https://explorer.earthengine.google.com/#detail/UMD%2Fhansen%2Fglobal_forest_change_2017_v1_5
 var hansen = ee.Image('UMD/hansen/global_forest_change_2017_v1_5')
 var hansenVis = {min: 0, max:100, bands: "treecover2000", palette: "3d3d3d,080a02,080a02,080a02,106e12,37a930,03ff17"}
 
+var waterCollection = ee.ImageCollection("JRC/GSW1_0/YearlyHistory")
+var waterVis = {min: 0, max: 3, palette: "cccccc,ffffff,99d9ea,0000ff"}
+Map.addLayer(waterCollection, waterVis, "Water Class")
+
+print(waterCollection)
 Map.addLayer(hansen, hansenVis, 'Forest 2000')
 
 // Load the LSIB country boundary collection.
