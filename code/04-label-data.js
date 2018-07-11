@@ -1,12 +1,17 @@
 var landsat7Collection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
 
 var classificationArea = /* color: #d63000 */ee.Geometry.Point([-12.392578125, 12.399002919688813]);
-var zoneSize = 55000
+var zoneSize = 56000
+var atlasImage = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
+// var labelProjection = atlasImage.projection()
+
+
 
 var classificationZone = ee.Image.random()
   .multiply(10000000)
   .toInt()
   .reduceToVectors({
+    crs: atlasImage.projection(),
     scale: zoneSize,
     geometry: classificationArea
   });
@@ -55,3 +60,49 @@ var landsatImage = landsat7Collection
 Map.addLayer(landsatImage, {min:0, max:3000, bands: "B3, B2, B1"}, "Landsat Image")
 
 // Code up to this point available at: https://code.earthengine.google.com/d40f69f81e87fba274f804806f8df661
+
+var atlasImage = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
+var labelProjection = atlasImage.projection()
+
+var samplingPoints = ee.Image
+  .random()
+  .multiply(100000)
+  .toInt()
+  .reduceToVectors({
+    crs: labelProjection,
+    geometry: classificationZone,
+    scale: labelProjection.nominalScale()
+  })
+  .aside(function(pixelVectors) {
+    Map.addLayer(pixelVectors, {}, 'vectorized Atlas pixels')
+  })
+  .map(function(feature) {
+    var centroid = feature.centroid(5)
+    return centroid
+  })
+
+Map.addLayer(samplingPoints)
+
+var landsatData = landsatImage.sampleRegions({
+  collection: samplingPoints,
+  scale: landsatImage.projection().nominalScale()
+})
+print(landsatData)
+Map.addLayer(landsatData)
+
+function toPoint(feature) {
+  feature = ee.Feature(feature)
+  return ee.Feature(
+    ee.Geometry.Point([feature.get('longitude'), feature.get('latitude')]),
+    feature.toDictionary().remove(['longitude', 'latitude']))
+}
+landsatData = landsatImage
+  .addBands(ee.Image.pixelLonLat())
+  .addBands(atlasImage)
+  .aside(function(collection) {
+    print(collection)
+  })
+  .map(toPoint)
+  .aside(function(collection) {
+    print(collection)
+  })

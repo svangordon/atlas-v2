@@ -18,12 +18,126 @@ Last episode, we talked about how to assemble the training data that we're going
 
 ### Loading Training Image
 
-We will use the code from the previous episode in which we created a Landsat composite image as the starting point. That code is available in Earth Engine here: http://bit.ly/2NAdfW4
+We will use the code from the previous episode in which we created a Landsat composite image as the starting point. That code is available in Earth Engine here: http://bit.ly/2NETIUG
 
 ## Getting Image Centerpoints
 
 The Atlas is, essentially, a grid of hand classified Landsat pixels at 2km resolution. To sample it, we want to create a collection of Atlas pixel centerpoints. To do that, we're going to use the same technique as we used to create the classification zones.
 
+First, we need to import our label image. It's important that our sampling points have the same projection as the Atlas data; we need to make sure that we're sampling exactly the pixel that was classified in the Atlas data.
+~~~
+var atlasImage = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
+var labelProjection = atlasImage.projection()
+~~~
+{:. .source .language-javascript}
+
+First we create an image on random values.
+~~~
+var centerpoints = ee.Image
+  .random()
+  .multiply(100000)
+  .toInt()
+~~~
+{:. .source .language-javascript}
+
+Then we reduce that raster image to vectors. We pass the label projection, the classification zone, and the scale of the Atlas images.
+~~~
+  .reduceToVectors({
+    crs: labelProjection,
+    geometry: classificationZone,
+    scale: 2000
+  })
+  .aside(function(pixelVectors) {
+    Map.addLayer(pixelVectors, {}, 'vectorized Atlas pixels')
+  })
+~~~
+{:. .code .language-javascript}
+
+We have turned our pixels into polygons, now we want to turn our polygons into centerpoints. We map over the collection of vectors, and convert each one into its centroid.
+~~~
+  .map(function(feature) {
+    var centroid = feature.centroid(5)
+    return centroid
+  })
+~~~
+{:. .source .language-javascript}
+
+## Sampling Landsat Image
+This Landsat image can now be sampled using the `.sampleRegions` method, similar to other images.
+
+~~~
+var landsatData = landsatImage.sampleRegions({
+  collection: samplingPoints,
+  scale: landsatImage.projection().nominalScale()
+})
+~~~
+{:. .source .language-javascript}
+
+## Adding Label Data
+To include our Atlas label data, we add that image to the landsat image with:
+~~~
+...
+  .addBands(atlasImage)
+...
+~~~
+{:. .source .language-javascript}
+
+## Preserving Location Data
+If you try to add our data feature collection to the map, you will discover that the features don't have any kind of geometry.
+
+~~~
+print(landsatData.geometry())
+~~~
+{:. .source .language-javascript}
+~~~
+MultiPoint, 0 vertices
+  type: MultiPoint
+  coordinates: []
+  geodesic: false
+~~~
+{:. .output .language-javascript}
+
+~~~
+~~~
+{:. }
+
+This means we don't know where each datapoint came from! Let's fix this.
+
+We'll add ee.Image.pixelLonLat() to the image. This is an image where each pixel knows its own longitude and latitude.
+~~~
+landsatData = landsatImage
+  .addBands(ee.Image.pixelLonLat())
+~~~
+{:. .code .language-javascript}
+We'll also add the Atlas labels.
+~~~
+  .addBands(atlasImage)
+~~~
+{:. .code .language-javascript}
+You can see that the features have their lon/lat coordinates as columns.
+~~~
+  .aside(function(collection) {
+    print(collection)
+  })
+~~~
+{:. .source .language-javascript}
+
+Then we will map over all of the features, remove their lon/lat coordinates, and turn them into geometries.
+
+~~~
+  .map(function (feature) {
+    feature = ee.Feature(feature)
+    return ee.Feature(
+      ee.Geometry.Point([feature.get('longitude'), feature.get('latitude')]),
+      feature.toDictionary().remove(['longitude', 'latitude']))
+  })
+  .aside(function(collection) {
+    print(collection)
+  })
+~~~
+{:. .source .language-javascript}
+## Creating a Training-Testing
+<!-- <br>
 We now would like to get the centerpoint of each pixel in our Atlas image.The process is like this:
 * Create an image of random numbers at the same scale and projection as the Atlas image.
 * Convert that raster image into a collection of vectors, so that each pixel is converted to a 2km square.
@@ -155,4 +269,4 @@ print(trainingData)
 print(testingData)
 ```
 
-Great! We've got our training and testing data, and we're ready to train our classifier.
+Great! We've got our training and testing data, and we're ready to train our classifier. -->

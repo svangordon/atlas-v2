@@ -1,5 +1,5 @@
 ---
-title: "Overview of the Atlas V2 Process"
+title: "Sampling Training Data"
 teaching: 5
 exercises: 30
 questions:
