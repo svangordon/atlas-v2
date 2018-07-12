@@ -285,51 +285,29 @@ var earlyYearLandsat = landsat7Collection
   .map(maskLandsat)
   .median()
   .clip(classificationZone)
+
+var multiSeasonImage = landsatImage.addBands(earlyYearLandsat)
 ~~~
 {:. .source .language-javascript}
 
+~~~
+var multiSeasonBands = multiSeasonImage.bandNames().remove('b1')
+assessClassification(multiSeasonImage, samplingPoints, multiSeasonBands, 'multiseason classification')
+~~~
+{:. .source .language-javascript}
 
-
-```
-// Create a filter for Season 1, ie, March 15 to May 15
-var springFilter2013 = getSeasons(2013).slice(1,2)
-// print('springFilter2013', springFilter2013)
-
-// Create our Landsat image for spring
-var springLandsatImage = landsat7Collection
-  .filterBounds(niameyAoi)
-  .filter(springFilter2013)
-  .map(maskLandsatImage)
-  .median()
-  .clip(niameyAoi)
-
-// Create an image with bands from both Landsat images
-var landsatImageMultiSeason = landsatImage.addBands(springLandsatImage)
-// Map.addLayer(springLandsatImage, {min:0, max:3000, bands: ["B3", "B2", "B1"]}, 'Spring Landsat Image')
-// print('Multi-Season Landsat Image', landsatImageMultiSeason)
-var trainingDataMultiSeason = sampleCollection(landsatImageMultiSeason, atlasV1_2013, partitions[0])
-var testingDataMultiSeason = sampleCollection(landsatImageMultiSeason, atlasV1_2013, partitions[1])
-var classifierMultiSeason = baseClassifier
-  // Provide classifier with band names for spring and fall images
-  .train(trainingDataMultiSeason, 'b1', ['B1', 'B2', 'B3', 'B4', 'B5', 'B7', 'B1_1', 'B2_1', 'B3_1', 'B4_1', 'B5_1', 'B7_1'])
-
-print('accuracy, Multi-Season', testingDataMultiSeason.classify(classifierMultiSeason).errorMatrix('b1', 'classification').accuracy())
-renderClassification(landsatImageMultiSeason.classify(classifierMultiSeason), 'Multi-Season')
-```
-
-You will notice that we had to provide the classifier with all of the band names for both images. When you add a band to an image, and the image already has a band with the same name, Earth Engine adds `_1` after the name of the new band. When we added the bands from one Landsat image to the other, Earth Engine added `_1` after all of those names, and we need to provide all of the band names to the classifier.
-
-So, how does our classifier do?
+<!-- So, how does our classifier do?
 
 <img src="../fig/06-classification-multi-season.png" border="10">
 
 <img src="../fig/06-accuracy-multi-season.png" border="10">
 
-64.0% accuracy: not bad!
+64.0% accuracy: not bad! -->
 
 You might try exploring adding images from different seasons. One thing to watch out for is dimensionality: at some point, adding more features will begin to reduce the classifier's performance. Then there are practical considerations: for some regions, it is simply not possible to get enough cloud-free images for certain times of year.
 
-## Sampling a Collection Instead of an Image
+<!-- We'll drop this for now -- it requires us  -->
+<!-- ## Sampling a Collection Instead of an Image
 
 So far, we've been aggregating our Landsat images and then sampling the aggregate. However, there's no reason why we couldn't sample each image individually. Why would we want to do this? By sampling each image, instead of aggregating and then sampling, we increase the amount of training data available. Instead of sampling one image and having 500 training samples, we can sample 30 images and have over 5000 training samples.
 
@@ -381,7 +359,7 @@ One motivation for sampling collections instead of single images is to try to co
 
 By sampling a collection instead of an aggregated image, we lose some of the advantages of aggregation. Part of the purpose of taking a median, for example, is to insulate the classifier from extreme, noisy, and probably-wrong inputs. When we take median values, for example, it's less important that we filter the dataset for outliers of artifacts. To compensate for this, we might consider improving our image pre-processing or filtering out scenes with a high percentage of cloud cover.
 
-Another disadvantage is simply practical: Earth Engine classifiers can only handle so many features. The practical limit is somewhere around 10,000; many more features than that and our classifier will time-out before finishing.
+Another disadvantage is simply practical: Earth Engine classifiers can only handle so many features. The practical limit is somewhere around 10,000; many more features than that and our classifier will time-out before finishing. -->
 
 ## Including Neighboring Zones
 
@@ -395,49 +373,50 @@ This is the down side of using the zone system: our classifiers are more accurat
 
 First, let's demonstrate the zone boundary issue. We're going to classify the zone next to our area of interest, and look to see if there's a noticeable border between the two zones. First, let's get a zone that neighbors our AOI.
 
-<hr>
-#### Aside
-I'm going to use a clever little trick to get the neighboring zone: `.indexOf()` tells you the index of an element in a JavaScript list. If we get the index of our AOI in our list of zone geometries, and then subtract one from that value, we will get a zone that is next to our AOI. If this is confusing or doesn't work, no worries! You can just assign your `neighboringZone` manually.
-<hr>
-
-```
+~~~
 /*
-  Demonstrate the zone boundary issue
+  Including neighboring zones
 */
 
-// Get the geometry of a zone that neighbors our AOI
-var neighboringZone = zoneGeometries[zoneGeometries.indexOf(niameyAoi) - 1]
-Map.addLayer(neighboringZone)
-```
+var neighborZonePoint = /* color: #d63000 */ee.Geometry.Point([-12.444763162638992, 12.427175804835738]);
+var neighborZone = ee.Image.random()
+  .multiply(10000000)
+  .toInt()
+  .reduceToVectors({
+    crs: atlasImage.projection(),
+    scale: zoneSize,
+    geometry: neighborZonePoint
+  });
 
-Now, let's classify that neighboring zone in the same way that we classified our AOI:
-
-```
-// Create our Landsat testing collection
-var landsatImageNeighbor = landsat7Collection
-  .filterBounds(neighboringZone)
-  .filter(earlyDrySeasonFilter2013)
-  .map(maskLandsatImage)
+var neighborImage = landsat7Collection
+  .filterBounds(neighborZone)
+  .filter(getLateYearFilter(2013))
+  .map(maskLandsat)
   .median()
-  .clip(neighboringZone)
+  .addBands(atlasImage)
+  .clip(neighborZone)
 
-// Assemble 2013 data and use it to train a classifier
-var samplingPointsNeighbor = getCenterPoints(neighboringZone, atlasV1_2013)
-var partitionsNeighbor = trainTestSplit(samplingPointsNeighbor, 0.7)
-var trainingDataNeighbor = sampleCollection(ee.ImageCollection(landsatImageNeighbor), atlasV1_2013, partitionsNeighbor[0])
-var testingDataNeighbor = sampleCollection(ee.ImageCollection(landsatImageNeighbor), atlasV1_2013, partitionsNeighbor[1])
+var neighborPoints = ee.Image
+  .random()
+  .multiply(100000)
+  .toInt()
+  .reduceToVectors({
+    crs: labelProjection,
+    geometry: neighborZone,
+    scale: labelProjection.nominalScale()
+  })
+  .map(function(feature) {
+    var centroid = feature.centroid(5)
+    return centroid
+  })
 
-var classifier = baseClassifier
-  .train(trainingDataNeighbor, 'b1', ['B1', 'B2', 'B3', 'B4', 'B5', 'B7'])
+Map.addLayer(neighborZone, {}, 'neighborZone')
+assessClassification(neighborImage, neighborPoints, landsatBands, 'neighbor classification')
+~~~
+{:. .source .language-javascript}
+<!-- <img src="../fig/06-zone-boundary-example-niamey.png" boder="10"> -->
 
-// print(assessClassification(testingData, classifier, 'b1'))
-print('Neighbor Accuracy', testingData.classify(classifier).errorMatrix('b1', 'classification').accuracy())
-renderClassification(landsatImageNeighbor.classify(classifier), 'neighbor classification')
-```
-
-<img src="../fig/06-zone-boundary-example-niamey.png" boder="10">
-
-As you can see, there's a pretty noticeable difference in the the images are classified in the two zones. To smooth the boundaries between the zones, we're going to sample data from outside of our AOI as well as inside. This is similar to a 'kernel' in image processing:
+In the Kedougou example, you can see that the neighbor classification is doing much better. Part of the reason for this is the boundary issue. There is a river that runs through these two zones, but the river only intersected with the sampling points in the northern zone. As a result, the `water` class is missing from the southern zone. As a result, there's a noticeable difference in the the images are classified in the two zones. To smooth the boundaries between the zones, we're going to sample data from outside of our zone as well as inside. This is similar to a 'kernel' in image processing:
 
 <img src="../fig/06-kernel-example.png" border="10" >
 
@@ -449,15 +428,16 @@ Our process is going to be as follows:
 * Combine the AOI sampling points and neighboring zone sampling points and proceed with the classification process as normal.
 
 <hr>
-We have the sampling points from our AOI (`samplingPoints`). Let's get our neighboring sampling points. First, we need to expand our AOI so that it encompasses all neighbor zones. We're going to do this using `.buffer()`. `.buffer()` takes a geometry and expands it by a distance in meters (or shrinks it if the distance is negative). We want to expand our AOI by 0.5°. I'm not sure what that is in meters, but I do know that our AOIs are squares, so we can get their perimeters and divide by 4. If your AOI is an irregular polygon, you're going to want to set your own buffer distance.
+We have the sampling points from our AOI (`samplingPoints`). Let's get our neighboring sampling points. First, we need to expand our AOI so that it encompasses all neighbor zones. We're going to do this using `.buffer()`. `.buffer()` takes a geometry and expands it by a distance in meters (or shrinks it if the distance is negative). We want to expand our zone by the size of the zone.
 
-```
-var bufferDistance = niameyAoi
-  .perimeter()
-  .divide(4)
-```
+~~~
+var expandedZone = classificationZone.buffer(zoneSize)
+Map.addLayer(expandedZone, {}, 'expanded zone')
+~~~
+{:. .source .language-javascript}
 
-We now use that buffer distance to expand our AOI.
+We want to create sampling and testing points for the zone itself as we would normally. We only want testing points that are inside of the zone, but we want training points from outside of the zone. Furthermore, we don't want to take every single training point inside of our buffered geometry, or the ratio of training points inside the zone to training points outside of the zone would be around 8:1, and signal from outside of the zone would overwhelm signal from inside of the zone.
+
 
 ```
 var bufferedAoi = niameyAoi.buffer(bufferDistance)

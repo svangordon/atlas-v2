@@ -3,7 +3,7 @@ var displayAtlasClassification = workshopTools.displayAtlasClassification
 
 var landsat7Collection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
 
-var classificationArea = /* color: #d63000 */ee.Geometry.Point([-12.392578125, 12.399002919688813]);
+var classificationpoint = /* color: #d63000 */ee.Geometry.Point([-12.392578125, 12.399002919688813]);
 var zoneSize = 56000
 // var labelProjection = atlasImage.projection()
 // var atlasImage = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
@@ -18,7 +18,7 @@ var classificationZone = ee.Image.random()
   .reduceToVectors({
     crs: atlasImage.projection(),
     scale: zoneSize,
-    geometry: classificationArea
+    geometry: classificationpoint
   });
 
 displayAtlasClassification(atlasImage.clip(classificationZone))
@@ -107,7 +107,7 @@ function assessClassification(trainingImage, samplingPoints, trainingBands, titl
   var trainingSize = 0.7
   var trainingData = imageData.filter(ee.Filter.lt('random', trainingSize))
   var testingData = imageData.filter(ee.Filter.gte('random', trainingSize))
-  var classifier = ee.Classifier.randomForest(20).train(trainingData, 'b1', trainingBands)
+  var classifier = ee.Classifier.randomForest(10).train(trainingData, 'b1', trainingBands)
 
   print(title,
     "testing accuracy:", testingData.classify(classifier).errorMatrix('b1', 'classification').accuracy(),
@@ -223,3 +223,45 @@ print(multiSeasonImage)
 var multiSeasonBands = multiSeasonImage.bandNames().remove('b1')
 
 assessClassification(multiSeasonImage, samplingPoints, multiSeasonBands, 'multiseason classification')
+
+/*
+  Including neighboring zones
+*/
+
+var neighborZonePoint = /* color: #d63000 */ee.Geometry.Point([-12.444763162638992, 12.427175804835738]);
+var neighborZone = ee.Image.random()
+  .multiply(10000000)
+  .toInt()
+  .reduceToVectors({
+    crs: atlasImage.projection(),
+    scale: zoneSize,
+    geometry: neighborZonePoint
+  });
+
+var neighborImage = landsat7Collection
+  .filterBounds(neighborZone)
+  .filter(getLateYearFilter(2013))
+  .map(maskLandsat)
+  .median()
+  .addBands(atlasImage)
+  .clip(neighborZone)
+
+var neighborPoints = ee.Image
+  .random()
+  .multiply(100000)
+  .toInt()
+  .reduceToVectors({
+    crs: labelProjection,
+    geometry: neighborZone,
+    scale: labelProjection.nominalScale()
+  })
+  .map(function(feature) {
+    var centroid = feature.centroid(5)
+    return centroid
+  })
+
+Map.addLayer(neighborZone, {}, 'neighborZone')
+assessClassification(neighborImage, neighborPoints, landsatBands, 'neighbor classification')
+
+var expandedZone = classificationZone.buffer(zoneSize)
+Map.addLayer(expandedZone, {}, 'expanded zone')
