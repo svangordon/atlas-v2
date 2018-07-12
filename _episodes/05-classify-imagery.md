@@ -238,158 +238,102 @@ producersAccuracy = ee.Dictionary.fromLists(
   testingClasses.map(ee.Algorithms.String),
   errorMatrix.producersAccuracy().project([0]).toList()
 )
-print(producersAccuracy)
+print('producer accuracy dictionary', producersAccuracy)
 ~~~
 {:. .source language-javascript}
 ~~~
+producer accuracy dictionary
+Object (5 properties)
+  15: 0
+  2: 0.8525641025641025
+  22: 0.574468085106383
+  25: 0.14285714285714285
+  8: 0
 ~~~
-
+{:. .output}
 
 > ## Dictionary Keys
 >
 > You'll notice that the classes change order; there's nothing that we can do about that. Dictionary keys are always strings, and always in alphabetical order, so for example `11` comes before `9`).
 {:. .callout}
 
-### Classifying an Image
+There's another statistic we can use to assess our classifier, called **Cohen's kappa**. Cohen's kappa attempts to random chance into account when assessing the performance of a classifier. For Cohen's kappa, a value of 1 means that the classifier is performing much better than random chance. A value of 0 means that the classifier is performing no better than random chance. And a negative value (theoretically unbounded, but only as low as -1 in Earth Engine) means that the classifier is doing worse than random chance.
 
-We have a trained classifier; let's use it to classify an image. We have our collection ofLlandsat images from earlier; let's composite that into one image by taking the `.median()` value and classify it with `.classify()`.
+As an illustration, imagine you have a set of one hundred samples you are trying to classify, 90% of which are class A and 10% of which are class B. You could get 90% accuracy simply by always guessing class A: after all, you would be right 90% of the time. This would not be terribly useful, however. The kappa score for such a classification, however, would be 0, representing that you did not do any better than random chance.
 
-```
-var classifiedImage = landsatImage
-  .classify(classifier)
+Let's look at the Cohen's kappa for our dataset.
 
-renderClassification(classifiedImage, 'classifiedImage')
-```
+~~~
+print('kappa', errorMatrix.kappa())
+~~~
+{:. .source. language-javascript}
+~~~
+kappa
+0.2849697322844842
+~~~
+{:. .output}
+
+That's a fair score: we're doing alright, though there's room for improvement.
+
+
+## Classifying an Image
+
+We have a trained classifier; let's use it to classify an image. First let's import the function we created earlier to display Atlas classifications.
+
+~~~
+var workshopTools = require('users/svangordon/lulc-conference:workshopTools')
+var displayAtlasClassification = workshopTools.displayAtlasClassification
+~~~
+{:. .code .language-javascript}
+
+Now we clip our landsat image to the classification zone and pass it the classifier.
+
+~~~
+var classifiedImage = landsatImage.clip(classificationZone).classify(classifier)
+displayAtlasClassification(classifiedImage, 'Classified Image')
+~~~
+{:. .code .language-javascript}
+
+That's all there is to it!
+
 <img src="../fig/05-rough-niamey-classification.png" border = "10">
 
 ## Exporting an Image
 
 Now that we have our classified image, we would like to export it so that we can use it outside of Earth Engine. We can do this by exporting the image to Google Drive.
 
-```
+~~~
 // Export a classified Image
 
 Export.image.toDrive({
   image: classifiedImage,
   folder: 'classifiedLulc',
-  region: aoi,
+  region: classificationZone,
   fileNamePrefix: 'classifiedLulc2013',
   scale: 30,
   description: 'classifiedLulc2013',
   maxPixels: 1e13
 });
-```
+~~~
+{:. .source .language-javascript}
+
+This outputs the image as a `.tiff` file. That's an ideal choice if you are planning to work with the image in another kind of GIS software, such as QGis. But, if you would prefer to display the image in a way that's easier to display -- for example, if you want an image for a presentation, or to put on a website, you will want to conver the image to RGB format. Use the `.visualize` method, and pass the visualization parameters you would usually use to display the image on the map. Earth Engine will convert the image to a three band RGB image.
+
+~~~
+// Export a classified Image
+
+Export.image.toDrive({
+  image: classifiedImage.visualize(atlasVisParams),
+  folder: 'classifiedLulc',
+  region: classificationZone,
+  fileNamePrefix: 'classifiedLulc2013',
+  scale: 30,
+  description: 'classifiedLulc2013',
+  maxPixels: 1e13
+});
+~~~
+{:. .source .language-javascript}
 
 Congrats! You've successfully created a land cover classification. Broadly speaking, that's more or less the process that you're going to use for just about everything: create a training set, use it to train a classifier, use that classifier to classify an image.
 
-### Assessing Accuracy
-
-Take a moment to switch to the Satellite base map, and look around our classified image, switching back and forth between the satellite base map and our classified image. How well does our classified image do? It seems like there are a few places that are clearly inaccurate: the south back of the city, for example, is classified as water, rather than settlement. But how can we quantitatively assess the accuracy of our classifier? We could check its accuracy on the training set, but that wouldn't tell us very much, because the classifier has already seen that data. We want to know how well it's going to do on data that it's never seen before, so we will use the testing data:
-
-```
-var errorMatrix = testingData
-  .classify(classifier)
-  .errorMatrix('b1', 'classification')
-
-var testingAccuracy = errorMatrix.accuracy()
-
-print('testingAccuracy', testingAccuracy)
-```
-<img src="../fig/05-low-testing-accuracy.png" border = "10">
-
-55% accuracy: not bad, but not great. Let's break down those numbers a little bit more. One thing that we can do is look at the error matrix. The error matrix, which is a confusion matrix, is an N x N array where the rows represent the actual values and the columns represent the predicted values. [Read a little bit more about confusion matrices here](https://en.wikipedia.org/wiki/Confusion_matrix):
-<img src="../fig/05-error-matrix.png" border="10">
-
-```
-print(errorMatrix)
-```
-
-What we'd really like to do is get the accuracy per land cover class. This is called the Producer's Accuracy, which we get using `.producersAccuracy()`. We've got a little problem, however: Earth Engine's `ConfusionMatrix` expects that classes are going to be contiguous integers, but our classes are non-contiguous integers. We need a way to distinguish between classes that have 0% accuracy because the classifier failed to classify any of them correctly and classes that have 0% accuracy becase they were not present in the testing set. To do this, we're going to:
-* Create a list of the land cover classes present in the testing dataset.
-    * To get the list of land cover classes, we're going to:
-        1. Get the `.aggregate_histogram()` of the land cover band (`'b1'`)
-        1. Convert the resulting object to an `ee.Dictionary`
-        1. Take the keys of that dictionary.
-* Create the producer's accuracy and convert it to a list.
-    * The output of `.producersAccuracy()` is a 1-dimensional array. To convert this to a list that we can work with, we will need to reproject it to a 0-dimensional array.
-* Select from that list the elements that are present in the testing dataset by index.
-    * The classes in the list of classes will be strings, so we need to convert them to `ee.Number`s using `ee.Number.parse()`
-* Zip together the land cover class numbers and the accuracies into a dictionary.
-
-```
-// Get the classes present in the testing set
-var testingClasses = testingData.aggregate_histogram('b1')
-testingClasses = ee.Dictionary(testingClasses).keys()
-
-print('testingClasses', testingClasses)
-
-// Take the producers accuracy, and reproject it from a 1-dimensional matrix
-// into 0 dimensions, and then convert it into a list.
-var producersAccuracy = errorMatrix.producersAccuracy().project([0]).toList()
-print('producersAccuracy', producersAccuracy)
-var accuracyByClass = testingClasses.map(function(classId) {
-  return producersAccuracy.get(ee.Number.parse(classId))
-})
-
-accuracyByClass = ee.Dictionary.fromLists(testingClasses, accuracyByClass)
-
-print('accuracyByClass', accuracyByClass)
-```
-
-Now let's roll that all together into a function.
-
-```
-function getAccuracyByClass(testingData, classProperty) {
-  testingData = ee.FeatureCollection(testingData)
-  // Get the classes present in the testing set
-  var testingClasses = testingData.aggregate_histogram(classProperty)
-  testingClasses = ee.Dictionary(testingClasses).keys()
-
-  // Take the producers accuracy, and reproject it from a one dimensional matrix
-  // into 0 dimensions, and then convert it into a list.
-  var producersAccuracy = errorMatrix.producersAccuracy().project([0]).toList()
-  var accuracyByClass = testingClasses.map(function(classId) {
-    return producersAccuracy.get(ee.Number.parse(classId))
-  })
-
-  return ee.Dictionary.fromLists(testingClasses, accuracyByClass)
-}
-```
-
-<!-- # Classifying Different Years
-
-So far we've only classified images from the same year as when the classifier was produced. But, we can classify from different years, too. So long as a dataset has data available for one of the years that Atlas was produced (1975, 2000, 2013), we can create a classifier that will work on other images from a remote sensing dataset.
-
-For example, let's create an image for 2014, and have our classifier classify that.
-
-```
-// Load Landsat 7 Collection
-var landsat7Collection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
-
-// Select an area of interest for Niamey
-var aoi = zoneGeometries[789]
-
-// Get time filter
-var timeFilter2014 = getEarlyDrySeason(2014)
-
-// Filter Landsat Collection
-var landsatImages2014 = landsat7Collection
-  .filterBounds(aoi)
-  .filter(timeFilter2014)
-  .map(maskLandsatImage)
-
-print('landsatImages', landsatImages)
-
-Map.addLayer(landsatImages, {min:0, max:3000, bands: ['B3', 'B2', 'B1']})
-``` -->
-
-
-# Improving our Classifier
-
-We've now gone through the whole process from start to finish. We can now:
-
-* Create training inputs
-* Sample training inputs
-* Train a classifier
-* Classify images
-* Assess the performance of our classifier
+Next, we will take a look at ways to improve the performance of our classifier.

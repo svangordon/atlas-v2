@@ -87,23 +87,22 @@ So, we're hitting 55% accuracy. Let's look at a few ways to increase our accurac
 
 One way to increase accuracy is to add additional features by including new datasets. This gives the classifier more information to use to make its decision. What we're trying to do here is to add as much 'signal' as we can: we're trying to increase the amount of useful information that is going in to the classifier. It can be tempting to use all the data you can find. We need to be a little bit careful when deciding what features we add: We don't want to add features that don't predict our ground truth label. Imagine the worst case scenario: adding a feature to an image that is absolute random noise.
 
-```
+~~~
 /*
-  See how accuracy changes if we add a feature of random noise
+  Do a noisey classification
 */
-var landsatWithRandomNoise = landsatImage.addBands(ee.Image.random())
-var trainingDataWithRandom = sampleCollection(ee.ImageCollection(landsatImage), atlasV1_2013, partitions[0])
-var testingDataWithRandom = sampleCollection(ee.ImageCollection(landsatImage), atlasV1_2013, partitions[1])
 
-var classifierWithRandom = ee.Classifier.randomForest(2)
-  .train(trainingData, 'b1', ['B1', 'B2', 'B3', 'B4', 'B5', 'B7', 'random'])
-
-print('accuracy, with random', testingData.classify(classifierWithRandom).errorMatrix('b1', 'classification').accuracy())
-```
+var noiseyImage = landsatImage.addBands(ee.Image.random()).addBands(ee.Image.random()).addBands(ee.Image.random())
+  .clip(classificationZone)
+var noiseyBands = landsatBands.cat(['random', 'random_1', 'random_2'])
+~~~
+{:. .source .language-javascript}
 
 <img src="../fig/06-accuracy-with-random.png" border="10">
 
-Not surprisingly, adding random information doesn't improve our classifier. We wouldn't intentionally add random noise to our classifier, but we have to be careful not to do so unintentionally: we might add a dataset that's not related or only weakly related to the label that we're trying to predict, or we might add a dataset that is highly noisey (such as satellite imaging that has not been properly cleaned and contains many cloudy images). Similarly, improving the signal-to-noise ratio of our data, for example by better masking out clouds or by better correcting for atmospheric interference, will result in better results.
+<!-- Not surprisingly, adding random information doesn't improve our classifier. We wouldn't intentionally add random noise to our classifier, but we have to be careful not to do so unintentionally: we might add a dataset that's not related or only weakly related to the label that we're trying to predict, or we might add a dataset that is highly noisey (such as satellite imaging that has not been properly cleaned and contains many cloudy images). Similarly, improving the signal-to-noise ratio of our data, for example by better masking out clouds or by better correcting for atmospheric interference, will result in better results. -->
+
+Weirdly, this actually *increases* accuracy. My only theory for why is that adding a bunch of random values functions like a drop-out node in a neural net. I don't know. Drop this because "add random numbers to your training data" isn't a great takeaway.
 
 ### Curse of dimensionality
 
@@ -124,18 +123,11 @@ Let's go ahead and add a dataset of elevation to our features. We're going to us
 
 
 ```
-/*
-  Add a dataset of elevation data to our training data
-*/
 var demData = ee.Image("USGS/SRTMGL1_003")
-var landsatWithElevation = landsatImage.addBands(ee.Algorithms.Terrain(demData.clip(niameyAoi)))
-var trainingDataWithElevation = sampleCollection(landsatWithElevation, atlasV1_2013, partitions[0])
-var testingDataWithElevation = sampleCollection(landsatWithElevation, atlasV1_2013, partitions[1])
-var classifierWithElevation = baseClassifier
-  .train(trainingDataWithElevation, 'b1', ['B1', 'B2', 'B3', 'B4', 'B5', 'B7', 'elevation'])
+var demImage = landsatImage.addBands(ee.Algorithms.Terrain(demData)).clip(classificationZone)
+var demBands = landsatBands.cat(['elevation', 'slope', 'aspect', 'hillshade'])
 
-print('accuracy, with Elevation', testingDataWithElevation.classify(classifierWithElevation).errorMatrix('b1', 'classification').accuracy())
-renderClassification(landsatWithElevation.classify(classifierWithElevation), 'with elevation')
+assessClassification(demImage, samplingPoints, demBands, 'dem classification')
 ```
 <img src="../fig/06-accuracy-with-elevation.png" border="10">
 
@@ -220,7 +212,7 @@ NDVI is interpreted to express how much vegetation is present at a pixel.
 
 As you can see, the southern coast of West Africa is greener than the north. Let's go ahead and add NDVI to our own data:
 
-```
+~~~
 /*
   Add NDVI
 */
@@ -229,7 +221,7 @@ var nirBand = "B4"
 var redBand = "B3"
 
 // Calculate the NDVI for our landsat image
-var ndviImage = landsatImage.normalizedDifference([nirBand, redBand])
+var ndviData = landsatImage.normalizedDifference([nirBand, redBand])
   .rename('ndvi')
 
 // Visualize the resulting NDVI
@@ -238,36 +230,65 @@ var ndviVis = {
   max: 1,
   palette: ["ffffff","ce7e45","df923d","f1b555","fcd163","99b718","74a901","66a000","529400","3e8601","207401","056201","004c00","023b01","012e01","011d01","011301"]
 }
-Map.addLayer(ndviImage, ndviVis, 'ndvi')
+Map.addLayer(ndviData, ndviVis, 'ndvi')
 
-var landsatWithNdvi = landsatImage.addBands(ndviImage.clip(niameyAoi))
-var trainingDataWithNdvi = sampleCollection(landsatWithNdvi, atlasV1_2013, partitions[0])
-var testingDataWithNdvi = sampleCollection(landsatWithNdvi, atlasV1_2013, partitions[1])
-var classifierWithNdvi = baseClassifier
-  .train(trainingDataWithNdvi, 'b1', ['B1', 'B2', 'B3', 'B4', 'B5', 'B7', 'ndvi'])
-  //.train(trainingDataWithNdvi, 'b1', ['B1', 'B2', 'B5', 'B7', 'ndvi'])
-  // Try changing the two lines above to see how dropping bands 3 and 4 affect classification.
+var ndviImage = landsatImage.addBands(ndviData.clip(classificationZone))
+var ndviBands = landsatBands.cat(['ndvi'])
 
-print('accuracy, with NDVI', testingDataWithNdvi.classify(classifierWithNdvi).errorMatrix('b1', 'classification').accuracy())
-renderClassification(landsatWithNdvi.classify(classifierWithNdvi), 'with NDVI')
+assessClassification(ndviImage, samplingPoints, ndviBands, 'ndvi classification')
 
-```
+~~~
+{:. .source .language-javascript}
 
 We see a modest increase in accuracy.
 <img src="../fig/06-ndvi-classification" border="10">
 <img src="../fig/06-accuracy-with-ndvi.png" border="10">
 
-If you'll recall, we talked earlier about highly correlated features. Because NDVI is calculated from Bands 3 and 4, the three bands are highly correlated. This is increasing the dimensionality of our training samples. What would happen if we dropped Bands 3 and 4, and only kept NDVI?
+<!-- If you'll recall, we talked earlier about highly correlated features. Because NDVI is calculated from Bands 3 and 4, the three bands are highly correlated. This is increasing the dimensionality of our training samples. What would happen if we dropped Bands 3 and 4, and only kept NDVI?
 
 <img src="../fig/06-ndvi-classification-dropped-bands.png" border="10">
 
-A 0.5% increase in accuracy isn't very significant, but the reduction in dimensionality can have some advantages, for example if the training set had many features or if we were trying to reduce the size of the training set due to Earth Engine's constraints.
+A 0.5% increase in accuracy isn't very significant, but the reduction in dimensionality can have some advantages, for example if the training set had many features or if we were trying to reduce the size of the training set due to Earth Engine's constraints. -->
 
 ## Including Multiple Seasons
 
 So far, we've only used Landsat data from the early dry season. However, we can sample from other parts of the year as well. Our goal here, as always, is to add even more information that distinguishes land cover classes. The idea is that there might be land cover classes that look similar in the images taken in the later part of the year, and there might be land cover classes that look similar in the images taken in the early part of the year, but there will be fewer land cover classes that look similar in both sets of images.
 
-First, we need to decide what time period we would like to sample. We'll go with season 1, which is from March 15 to May 15. We chose this period because it is before the start of rainy season in the Sahel, so we will have imagery from both before and after the rainy season. In other regions, such as along the coast, different time periods will likely be appropriate. Use your judgment! After all, you are the experts.
+First, we need to decide what time period we would like to sample. We'd like to go with a time towards the start of the rainy season, so that it is possible to get a serviceable amount of cloud free imagery. So, let's take a look at the annual precipitation pattern for our classification zone.
+
+~~~
+print(ui.Chart.image.series(chirpsCollection.filterDate('2013-01-01', '2013-12-31'), classificationZone));
+~~~
+{:. .source .language-javascript}
+
+So let's say March 15 to April 15. I'm kind of choosing those dates based on intuition, so that's something that you can test out to find better dates, or that you can tailor to individual zones.
+
+Now we'll create a function to create an early year filter, like we did for the late part of the year. We can just copy and paste that function and change the dates as necessary. Remember you can use <kbd>Ctrl</kbd>+<kbd>🖰</kbd> to create a cursor in multiple locations
+
+~~~
+function getEarlyYearFilter(year) {
+  return ee.Filter.or(
+    ee.Filter.date( year - 1 + '-03-15',  year - 1 + '-04-15'),
+    ee.Filter.date( year     + '-03-15',  year     + '-04-15'),
+    ee.Filter.date( year + 1 + '-03-15',  year + 1 + '-04-15')
+  )
+}
+~~~
+{:. .source .language-javascript}
+
+Now we need to create a Landsat image for the early part of the year, like we did earlier for the late part of the season.
+
+~~~
+var earlyYearLandsat = landsat7Collection
+  .filterBounds(classificationZone)
+  .filter(getEarlyYearFilter(2013))
+  .map(maskLandsat)
+  .median()
+  .clip(classificationZone)
+~~~
+{:. .source .language-javascript}
+
+
 
 ```
 // Create a filter for Season 1, ie, March 15 to May 15

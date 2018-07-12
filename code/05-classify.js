@@ -155,5 +155,11 @@ producersAccuracy = ee.Dictionary.fromLists(
   testingClasses.map(ee.Algorithms.String),
   errorMatrix.producersAccuracy().project([0]).toList()
 )
-
 print(producersAccuracy)
+
+var workshopTools = require('users/svangordon/lulc-conference:workshopTools')
+var displayAtlasClassification = workshopTools.displayAtlasClassification
+
+var classifiedImage = landsatImage.clip(classificationZone).classify(classifier)
+
+displayAtlasClassification(classifiedImage, 'Classified Image')
