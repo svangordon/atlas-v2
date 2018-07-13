@@ -255,8 +255,96 @@ Map.addLayer(zonePoints, {color: 'green'}, 'sampling points')
 
 Map.addLayer(expandedData, {}, 'expandedData')
 
-print('expandedData histo', expandedData.aggregate_histogram('b1').values())
+print('expandedData histo', ee.Dictionary(expandedData.aggregate_histogram('b1')).keys())
 
 displayAtlasClassification(atlasImage.clip(expandedZone), 'expanded atlas')
+
+// These are all of the classes in the expanded dataset
+var expandedClasses = ee.Dictionary(expandedData.aggregate_histogram('b1')).keys().map(ee.Number.parse)
+var sizeOfZoneTrainingSet = zoneTrainingData.size()
+var sizePerClass = sizeOfZoneTrainingSet.divide(expandedClasses.size()).toInt()
+print('sizePerClass', sizePerClass)
+print(expandedClasses)
+
+var balancedExpandedData = ee.Dictionary(expandedData.aggregate_histogram('b1'))
+  .map(function(classValue, classCount) {
+    classValue = ee.Number.parse(classValue)
+    classCount = ee.Number(classCount)
+    var classData = expandedData.filter(ee.Filter.eq(classBand, classValue))
+    var classSizeGreaterThanClassCount = classCount.gte(sizePerClass)
+    var valueToReturnIfGreaterThan = classData
+      .randomColumn('classSplit')
+      .limit(sizePerClass, 'classSplit')
+    var valueToReturnIfLessThan = ee.List.repeat(classData, sizePerClass.divide(classCount).toInt())
+
+    valueToReturnIfLessThan = ee.FeatureCollection(valueToReturnIfLessThan).flatten()
+
+    var underOrOverSampleAlgorithm = ee.Algorithms.If(classSizeGreaterThanClassCount,
+      valueToReturnIfGreaterThan,
+      valueToReturnIfLessThan
+    )
+    return underOrOverSampleAlgorithm
+    var output = ee.Algorithms.If(classCount.eq(sizePerClass),
+      classData,
+      underOrOverSampleAlgorithm
+    )
+    return ee.FeatureCollection(output).size()
+  })
+  .values()
+
+var altBalanced = ee.Dictionary(expandedData.aggregate_histogram('b1'))
+  .map(function(classValue, classCount) {
+    var timesToRepeat = sizePerClass.divide(ee.Number(classCount)).ceil()
+    return ee.FeatureCollection(ee.List.repeat( expandedData.filter(ee.Filter.eq(classBand, classValue)), timesToRepeat )).flatten()
+      .size()
+  })
+
+print('altBalanced', altBalanced)
+
+print('expanded, class 13', expandedData.filter(ee.Filter.eq('b1', 13)))
+print('expanded, class 15', expandedData.filter(ee.Filter.eq('b1', 15)))
+print('expanded, class 2', expandedData.filter(ee.Filter.eq('b1', 2)))
+print('expanded, class 22', expandedData.filter(ee.Filter.eq('b1',22)))
+print('expanded, class 24', expandedData.filter(ee.Filter.eq('b1',24)))
+print('expanded, class 25', expandedData.filter(ee.Filter.eq('b1',25)))
+print('expanded, class 3', expandedData.filter(ee.Filter.eq('b1', 3)))
+print('expanded, class 8', expandedData.filter(ee.Filter.eq('b1', 8)))
+print('expanded, class 9', expandedData.filter(ee.Filter.eq('b1', 9)))
+
+var repeated = ee.List.repeat(expandedData.filter(ee.Filter.eq('b1', 13)), 20)
+repeated = ee.FeatureCollection(repeated).flatten()
+print('13 repeated 20 times (5 * 20)', repeated)
+
+var ic = ee.List.repeat(expandedImage.addBands(ee.Image.pixelLonLat()), 80)
+ic = ee.ImageCollection(ic)
+  .map(function(image) {
+    return image.stratifiedSample({
+      numPoints: 1,
+      classBand: 'b1',
+      region: expandedPoints,
+      scale: 30
+    })
+    .map(toPoint)
+  }).flatten()
+print('ic oversampled', ic)
+print('ic oversampled histogram', ic.aggregate_histogram('b1'))
+
+// altBalanced.evaluate(function (collection) {
+//   print("eval'd collection", collection)
+// })
+
+print('balanced', balancedExpandedData)
+balancedExpandedData = ee.FeatureCollection(balancedExpandedData).flatten()
+
+print('balancedExpandedData', balancedExpandedData, balancedExpandedData.aggregate_histogram('b1'))
+print('balancedExpandedData', balancedExpandedData.limit(100))
+
 // total points: 6280
 // classes: 9
+var overSampled = zoneImage.sample({
+  region: zonePoints,
+  scale: 30,
+  numPixels: 1500
+})
+
+print(overSampled, overSampled.aggregate_histogram('b1'))
