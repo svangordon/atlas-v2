@@ -80,14 +80,14 @@ In the Kedougou example, you can see that the neighbor classification is doing m
 
 <img src="../fig/06-kernel-example.png" border="10" >
 
+<!-- We would also like to oversample minority classes, so that there is an even number of all of the training classes present... -->
+
 Our process is going to be as follows:
 
 * Generate the sampling points for the AOI as normal.
 * Expand the AOI so that it encompasses all neighboring zones, and generate its sampling points.
-* Limit the neighboring zone sampling points, so that our new sampling points are 50% in the original AOI, and 50% in the neighboring zones.
-* Combine the AOI sampling points and neighboring zone sampling points and proceed with the classification process as normal.
+* Sample from the expanded area, so that we have a new set of training points that is 50% in the original AOI, and 50% in the neighboring zones.
 
-<hr>
 We have the sampling points from our AOI (`samplingPoints`). Let's get our neighboring sampling points. First, we need to expand our AOI so that it encompasses all neighbor zones. We're going to do this using `.buffer()`. `.buffer()` takes a geometry and expands it by a distance in meters (or shrinks it if the distance is negative). We want to expand our zone by the size of the zone.
 
 ~~~
@@ -96,10 +96,25 @@ Map.addLayer(expandedZone, {}, 'expanded zone')
 ~~~
 {:. .source .language-javascript}
 
-We want to create sampling and testing points for the zone itself as we would normally. We only want testing points that are inside of the zone, but we want training points from outside of the zone. Furthermore, we don't want to take every single training point inside of our buffered geometry, or the ratio of training points inside the zone to training points outside of the zone would be around 8:1, and signal from outside of the zone would overwhelm signal from inside of the zone.
+
+We can now create sampling points for this zone as we did for the other zones. We only want sampling points for pixels that are outside of our original zone. So, we can use the `.difference()` method to subtract the original zone from the expanded zone, and only get the resulting centerpoints.
+~~~
+var expandedPoints = getPoints(expandedZone.difference(zoneGeometry))
+Map.addLayer(expandedPoints, {color: 'green'}, 'expanded points')
+~~~
+{:. .source .language-javascript}
+
+We want to create sampling and testing points for the zone itself as we would normally. We don't want to take every single training point inside of our buffered geometry, or the ratio of training points inside the zone to training points outside of the zone would be around 8:1, and signal from outside of the zone would overwhelm signal from inside of the zone.
 
 ~~~
-
+var imageData = trainingImage
+  .addBands(ee.Image.pixelLonLat())
+  .sampleRegions({
+    collection: samplingPoints,
+    scale: 30
+  })
+  .map(toPoint)
+  .randomColumn('random', 0)
 ~~~
 {:. .source .language-javascript}
 
