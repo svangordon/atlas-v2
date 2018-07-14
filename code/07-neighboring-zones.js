@@ -197,7 +197,6 @@ var expandedPoints = getPoints(expandedZone.difference(classificationZone, 10))
 Map.addLayer(expandedPoints, {color: 'green'}, 'expanded points')
 
 var expandedImage = getLandsatImage(expandedZone)
-print(zonePoints.size())
 var expandedData = expandedImage.addBands(ee.Image.pixelLonLat())
   .sampleRegions({
     collection: expandedPoints,
@@ -207,6 +206,15 @@ var expandedData = expandedImage.addBands(ee.Image.pixelLonLat())
   .randomColumn('expandedDataSelection', 1)
   .limit(zoneData.size(), 'expandedDataSelection')
   .randomColumn('trainTestSplit')
+
+function sampleImage(image, points) {
+  return image.addBands(ee.Image.pixelLonLat())
+    .sampleRegions({
+      collection: expandedPoints,
+      scale: 30,
+    })
+    .map(toPoint)
+}
 
 var expandedTrainingData = expandedData.filter(ee.Filter.lt('trainTestSplit', trainingSize))
 var expandedTestingData = expandedData.filter(ee.Filter.gte('trainTestSplit', trainingSize))
@@ -227,8 +235,57 @@ print('Accuracy (zone testing set):', zoneTestingData.classify(expandedClassifie
 displayAtlasClassification(zoneImage.classify(expandedClassifier), 'w/ neighbor classification')
 
 assessClassification(neighborImage, neighborPoints, landsatBands, 'neighbor classification')
-assessClassification(zoneImage, zonePoints, landsatBands, 'neighbor classification')
-// Map.addLayer(expandedData, {color: 'purple'}, 'expandedData')
+assessClassification(zoneImage, zonePoints, landsatBands, 'zone classification')
+
+print('training data histogram', trainingData.aggregate_histogram('b1'))
+print('combined area histogram', zoneData.merge(expandedData).aggregate_histogram('b1'))
+
+// Get the number of classes in our expanded area
+var numberOfClasses = zoneTrainingData.merge(expandedData).aggregate_count_distinct('b1')
+// Get the number of samples in the training set
+var samplesInTrainingSet = zoneTrainingData.size()
+
+var samplesPerClass = samplesInTrainingSet/*.multiply(2)*/.divide(numberOfClasses).int()
+print('samplesPerClass', samplesPerClass)
+
+var imagesToSample = ee.ImageCollection(ee.List.repeat(expandedImage, samplesPerClass))
+print(imagesToSample)
+
+// We now repeat the expanded image as many times as we want features for each class
+var oversampledData = ee.ImageCollection(
+    ee.List.repeat(expandedImage.addBands(ee.Image.pixelLonLat()), samplesPerClass)
+  )
+  .map(function(image) {
+    return image.stratifiedSample({
+      numPoints: 1,
+      classBand: 'b1',
+      region: expandedPoints.merge(zoneTrainingData),
+      scale: 30,
+      seed: ee.Number.parse(image.get('system:index'))
+    })
+    .map(toPoint)
+  }).flatten()
+
+// function oversampleImage (image, samplingPoints) {
+//   image = ee.Image(image)
+//   samplingPoints = ee.FeatureCollection(samplingPoints)
+//   // Get the number of classes in our data
+//   var numberOfClasses = zoneTrainingData.merge(expandedData).aggregate_count_distinct('b1')
+// }
+
+Map.addLayer(expandedPoints.merge(zoneTrainingData), {color: 'purple'}, 'oversampled possible places')
+print('oversampledData', oversampledData)
+print('oversampledData distinct', oversampledData)
+Map.addLayer(oversampledData, {color: 'pink'}, 'oversampledData')
+print('oversampled distinct', oversampledData.distinct(landsatBands))
+
+trainingData = oversampledData.merge(zoneTrainingData)
+var classifier = ee.Classifier.randomForest(10).train(trainingData, 'b1', landsatBands)
+
+print('Balanced classifier accuracy:', zoneTestingData.classify(classifier).errorMatrix('b1', 'classification').accuracy())
+print('Balanced classifier kappa:', zoneTestingData.classify(classifier).errorMatrix('b1', 'classification').kappa())
+displayAtlasClassification(zoneImage.classify(classifier), 'balanced classification')
+
 
 
 // var imageData = zoneImage
