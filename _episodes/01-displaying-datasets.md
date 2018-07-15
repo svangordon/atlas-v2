@@ -15,6 +15,15 @@ keypoints:
 - Functions like `print` and `Map.addLayer` cannot be used in functions that are running on the server side.
 ---
 
+## Overview
+We are going to discuss accessing and displaying the Atlas and AtlasV2 datasets in Earth Engine. Currently, both Atlas and AtlasV2 are available as Earth Engine **assets**. By assets, be mean that they are files that are available through Earth Engine. Earth Engine assets can be images, image collections, or feature collections. Images are raster data, image collections are a group of raster data, and feature collections are a group of vector data.
+
+The Atlas and AtlasV2 data are available as images and image collections. The actual data in the rasters are not any different: in both cases, the files are the same. With the image collection, all that we have done is tell Earth Engine that we want a certain group of images (such as all Atlas images, or all AtlasV2 images) grouped together into a collection, so that we can access them all at once.
+
+In this episode, we will discuss how to load the Atlas and AtlasV2 datasets as images or image collections. We will then discuss how to display these images onto the map.
+
+<!-- TODO: Finally, we will discuss how to export the images from Earth Engine. -->
+
 ## Loading as `ee.Image`
 The Atlas and Atlas V2 datasets are available as Earth Engine assets. User `svangordon/` currently hosts them in the folder `conference`.
 
