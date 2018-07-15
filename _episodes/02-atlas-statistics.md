@@ -29,7 +29,6 @@ Let's import some of the tools that we created last episode and saved in our wor
 ~~~
 // Import tools and datasets from workshopTools. Make sure to put in your own user name!
 var workshopTools = require('users/svangordon/lulc-conference:workshopTools')
-var displayAtlasClassification = workshopTools.displayAtlasClassification
 var atlasV2_2013 = ee.Image('users/svangordon/conference/atlas_v2/classify/2013')
 var atlasV2Collection = workshopTools.atlasV2Collection
 
@@ -47,14 +46,14 @@ _Diagram of .reduceRegion_
 _Documentation for ee.Image().reduceRegion()_
 
 
-Let's go ahead and reduce one of our Atlas V2 images. We will use the `ee.Reducer.frequencyHistogram()`, which counts the number of times each value is present.
+Let's go ahead and reduce one of our Atlas V2 images. We will use the `ee.Reducer.frequencyHistogram()`, which counts the number of times each value is present. Note that these numbers are not the areas of each class, but instead are the number of pixels of each class.
 ~~~
-var statsAtlasV2_2013 = atlasV2_2013.reduceRegion({
+var imageReduction = atlasV2_2013.reduceRegion({
     reducer: ee.Reducer.frequencyHistogram(),
     scale: 30,
     maxPixels: 1e13
   })
-print("atlasV2 stats 2013", statsAtlasV2_2013)
+print("atlasV2 stats 2013", imageReduction)
 ~~~
 {:. .source .language-javascript}
 ~~~
@@ -89,6 +88,16 @@ We didn't pass a geometry, so the reduction happens over the entire area of the 
 
 In the output, you can see that we're returning an object with one property, `b1`. That is the class band for the image; if the image had more than one band, those bands would be present as well.
 
+Let's take only the `b1` property of our reduction output, and cast it to a dictionary.
+~~~
+var pixelCounts = ee.Dictionary(statsAtlasV2_2013.get('b1'))
+~~~
+{:. .source .language-javascript}
+> ## Casting
+>
+> When we use a datatype like we do above, we're **casting**. We're telling Earth Engine that the result of `imageReduction.get('b1')` is going to be of the `ee.Dictionary` type. Earth Engine is processing a long set of instructions, and sometimes, it's not sure what the result of a certain process is going to be. Sometimes, typically when we use a method like `.get()`, we have to explicitly tell Earth Engine what kind of object a variable is going to be.
+{:. .callout}
+
 ### Converting Counts to Areas
 The `.frequencyHistogram()` reducer gives a count of pixels, not a total area. To convert pixel counts to area, we can multiply the pixel counts by an appropriate conversion coefficient: `4` for Atlas (`1 pixel == 4km^2`); `0.0009` for Atlas V2 (`1 pixel == 0.0009km^2`). We will multiply our vales by 0.0009, in this example.
 
@@ -98,24 +107,15 @@ var conversionCoefficient = 0.0009
 ~~~
 {:. .source .language-javascript}
 
-We want to convert the areas of the `b1` band from pixel counts to areas.
-~~~
-var pixelCounts = ee.Dictionary(statsAtlasV2_2013.get('b1'))
-~~~
-{:. .source .language-javascript}
-
-> ## Casting
->
-> When we use a datatype like we do above, we're **casting**. We're telling Earth Engine that the result of `statsAtlasV2_2013.get('b1')` is going to be of the `ee.Dictionary` type. Earth Engine is processing a long set of instructions, and sometimes, it's not sure what the result of a certain process is going to be. Sometimes, typically when we use a method like `.get()`, we have to explicitly tell Earth Engine what kind of object a variable is going to be.
-{:. .callout}
-
-We now have a dictionary of pixels values that we will to convert to areas by multiplying by our conversion coefficient (0.0009). When we use `ee.Dictionary().map()`, we give it a function that takes the `key` and `value` of each element in the `ee.Dictionary` and returns the new `value`.
+We have a dictionary of pixels counts that we want to convert to areas by multiplying by our conversion coefficient (0.0009). We will use `ee.Dictionary().map()`. When we use `ee.Dictionary().map()`, we give it a function that takes the `key` and `value` of each element in the `ee.Dictionary` and returns the new `value`.
 ~~~
 // Multiply the counts by the conversion coefficient
-var areasAtlasV2_2013 = pixelCounts
+var classAreas = pixelCounts
   .map(function(key, value) {
-    return ee.Number(value).multiply(0.0009)
+    return ee.Number(value).multiply(conversionCoefficient)
   })
+
+print('classAreas', classAreas)
 ~~~
 {:. .source .language-javascript}
 ~~~
@@ -150,25 +150,29 @@ Object (23 properties)
 
 The method that we have laid out produces statistics for an entire image. However, it is also possible for us to get statistics for a defined region, such as a country or a custom geometry. When we make our `.reduceRegion` call, we will also provide a geometry to perform the reduction over.
 
-Let's start by drawing a polygon on the map. This geometry is now available to us as `geometry`. That's the only difference between the methods: we're now providing a geometry for the reduction.
+#### Custom Geometry
+Let's start by drawing a polygon on the map. This geometry is now available to us as `geometry`. That's the only difference between getting statistics for a region and for an entire image: we are now providing a geometry for the reduction.
 ~~~
 // Make sure to draw a custom geometry on the map!
+// Get the pixel counts
 var regionalAreas = atlasV2_2013.reduceRegion({
     reducer: ee.Reducer.frequencyHistogram(),
-    region: geometry,
+    geometry: geometry,
     scale: 30,
     maxPixels: 1e13
   })
+// Convert pixel counts to areas
 regionalAreas = ee.Dictionary(regionalAreas.get('b1'))
   .map(function(key, value) {
-    return ee.Number(value).multiply(0.0009)
+    return ee.Number(value).multiply(conversionCoefficient)
   })
 
 print('regional areas', regionalAreas)
 ~~~
 {:. .source .language-javascript}
 
-We can also perform regions over predefined geometries, like country boundaries. One great collection of country boundaries is the US DoS's Large-Scale International Boundary collection. We can import it as a feature collection:
+#### Country Geometries
+We can also perform regions over predefined geometries, like country boundaries. One collection of country boundaries that is available in Earth Engine is the US DoS's Large-Scale International Boundary collection. We can import it as a feature collection:
 ~~~
 var countryBoundaries = ee.FeatureCollection('USDOS/LSIB/2013')
 ~~~
@@ -189,7 +193,7 @@ Map.addLayer(countryGeometry)
 ~~~
 {:. .source}
 
-Using a country as the region for a reduction is not any different that using our custom geometry:
+Using a country as the region for a reduction is not any different than using our custom geometry:
 ~~~
 var regionalAreas = atlasV2_2013.reduceRegion({
     reducer: ee.Reducer.frequencyHistogram(),
@@ -207,9 +211,14 @@ print('country areas', regionalAreas)
 
 ## Display Area as Bar Chart
 
-Let's display the class counts as a bar chart, using the `ui.Chart.feature` methods. `ui.Chart.feature` displays a `ee.FeatureCollection`, so let's convert our dictionary of areas into a feature and put that feature in a feature collection.
+Let's display the class counts as a bar chart, using the `ui.Chart.feature` methods. `ui.Chart.feature` displays a `ee.FeatureCollection`, so we will convert our dictionaries of areas into features and turn those features into a feature collection.
+> ## Null-geometry Features
+>
+> The first parameter we pass to feature is the geometry. In this case, the feature does not have a geometry, so we pass `null` instead.
+{:. .callout}
+
 ~~~
-var chartInput = ee.Feature(null, areasAtlasV2_2013)
+var chartInput = ee.Feature(null, classAreas)
 chartInput = ee.FeatureCollection(chartInput)
 ~~~
 {:. .source .language-javascript}

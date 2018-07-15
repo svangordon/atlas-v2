@@ -13,33 +13,38 @@ print("atlasV2 stats 2013", imageReduction)
 
 var pixelCounts = ee.Dictionary(imageReduction.get('b1'))
 
+var conversionCoefficient = 0.0009
+
 // Multiply the counts by the conversion coefficient
 var classAreas = pixelCounts
   .map(function(key, value) {
-    return ee.Number(value).multiply(0.0009)
+    return ee.Number(value).multiply(conversionCoefficient)
   })
 
-print(classAreas)
+print('classAreas', classAreas)
 
 /*
   Reduce a region.
 */
 // Make sure to draw a custom geometry on the map!
+// Get the pixel counts
 var regionalAreas = atlasV2_2013.reduceRegion({
     reducer: ee.Reducer.frequencyHistogram(),
     geometry: geometry,
     scale: 30,
     maxPixels: 1e13
   })
+// Convert pixel counts to areas
 regionalAreas = ee.Dictionary(regionalAreas.get('b1'))
   .map(function(key, value) {
-    return ee.Number(value).multiply(0.0009)
+    return ee.Number(value).multiply(conversionCoefficient)
   })
 
 print('regional areas', regionalAreas)
 
-// Perform a reduction for a country.
-
+/*
+  Perform a reduction for a country.
+*/
 // Load the LSIB country boundary collection.
 var countryBoundaries = ee.FeatureCollection('USDOS/LSIB/2013')
 Map.addLayer(countryBoundaries)
