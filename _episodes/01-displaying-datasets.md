@@ -23,8 +23,7 @@ https://code.earthengine.google.com/?asset=users/svangordon/conference
 
 Atlas images are in the folder `'users/svangordon/conference/atlas/'`. The Atlas images have the same filenames as the original files hosted by USGS.
 
-**Using the assets tab, import the Atlas images, give them the names below**
-
+Let's import the Atlas images.
 ~~~
 var atlas_1975 = ee.Image('users/svangordon/conference/atlas/swa_1975lulc_2km')
 var atlas_2000 = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
@@ -92,6 +91,40 @@ ImageCollection users/svangordon/conference/atlas_v2/collections/classify (5 ele
     4: Image users/svangordon/conference/atlas_v2/collections/classify/2009 (1 band))
 ~~~
 {: .output}
+
+## Images vs Image Collections
+
+We're going to look into loading the Atlas and AtlasV2 images as both Images and Image Collections. You may be wondering what the difference is between and image and an image collection. An Image is a raster object, stored on the Earthe Engine servers. A collection is a container that holds any number of images (or features). You can think of it like a folder or directory on a computer. It's kind of like a sack. You might also think of it similar to a list or an array, with a few key differences. In a list or array, you can access arbitrary elements in the list. For example:
+~~~
+var myList = ee.List(1, 3, 5, 9, 2)
+var thirdElement = myList.get(2)
+print('third element is', thirdElement)
+~~~
+{:. .source .language-javascript}
+~~~
+third element is 5
+~~~
+{:. .output}
+> ## Array Indexing
+>
+> Remember, when counting array positions, we start counting from 0. `myList.get(0)` is the first element, `myList.get(1)` is the second element, and so forth.
+{:. .callout}
+
+With a collection, there is no such method available. Collections are optimized to work with features and images, and will run faster than an `ee.List` would containing the same data. Part of the trade-off for this better performance is that we cannot access arbitrary elements in a collection.
+
+There are a couple of ways that we can mitigate this limitation. We can get the first element of a collection using the `.first()` method. (Note that you will always have to cast the returned value to an `ee.Image` or `ee.Feature`. This is useful if you want to look at the first value in a collection while your developing, or if you are trying to empty a collection with only one element.
+
+It is also possible to convert collections to lists. We want to avoid doing this when we can, as it's a computationally expensive process, but sometimes it is simply unavoidable. To convert a collection to a list, we can use the `.toList()` method. If we want to access a specific element in that collection, we can use the arguments to limit the resulting list to a single element, offset by the index of the element we would like to access.
+~~~
+var fifthElement = collection.toList(1, 5).get(0)
+~~~
+{:. .source language-javascript}
+
+### Which do we want?
+The advantage to loading the Atlas and AtlasV2 data as `ee.Image`s is that we can access specific specific years directly. If you want the classification for 2013, you can load that image. The advantage to loading the images as an `ee.ImageCollection` is that we can filter the images by date. For example, if you wanted to get all images from 2000 - 2010, we could load it as an image collection and then use `atlasV2Collection.filterDate('2000-01-01', '2010-01-01')` to select only those images.
+
+In general, if you know specifically which years you are interested in, it might make more sense to load the data as an `ee.Image`. If you might like to get different years, or you are loading many years and don't want to type them all out, use an `ee.ImageCollection`.
+
 
 ## Display Classifications
 Let's display the Atlas and Atlas V2 images on the map. We will need to provide visualization parameters for our images.

@@ -36,7 +36,10 @@ Our process will be as follows: We will create a function that takes as its para
 
 We will be automatically running classification on a number of zones and for a number of years. First, however, we need to determine what zones we want to classify and for what years. We're going to do this by selecting a subsection of our classification geometries, and by manually defining a list of years that we are interested in. For demonstration purposes, we're going to classify all of the zones in Senegal, with one classification performed every three years.
 
-```
+### Assembling classification geometries
+
+Using the LSIB collection, let's load the boundaries of Senegal.
+~~~
 /*
   Select the geometries that we would like to classify. In this case, we're going
   to classify every zone in Senegal.
@@ -46,50 +49,69 @@ We will be automatically running classification on a number of zones and for a n
 var countryBoundaries = ee.FeatureCollection('USDOS/LSIB/2013')
 // Select our contry of interest
 var countryOfInterest = "SENEGAL"
-var aoiSelector = countryBoundaries.filter(ee.Filter.eq('name', countryOfInterest))
+var aoiBoundary = countryBoundaries.filter(ee.Filter.eq('name', countryOfInterest))
+Map.addLayer(aoiBoundary)
+~~~
+{:. .source .language-javascript}
 
-// Create our list of zones
-var areasOfInterest = ee.FeatureCollection(zoneGeometries)
-  .filterBounds(aoiSelector)
+Now let's define the function to get the list of classification zones for that geometry of interest.
+~~~
+var zoneSize = 56000
+function getClassificationZone(pointGeometry, zoneSize) {
+  pointGeometry = ee.FeatureCollection(pointGeometry).geometry().buffer(ee.Number(zoneSize).divide(2))
+  var atlasProjection = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km').projection()
+  return ee.Image.random()
+    .multiply(10000000)
+    .toInt()
+    .reduceToVectors({
+      crs: atlasProjection,
+      scale: zoneSize,
+      geometry: pointGeometry,
+      geometryInNativeProjection: true
+    })
+}
+~~~
+{:. .source .language-javascript}
 
-// Display our areas of interest on the map.
-Map.addLayer(areasOfInterest)
-```
+Now, let's create our collection of classification zones, and add it to the map.
+~~~
+var classificationZones = getClassificationZone(aoiBoundary, zoneSize)
 
+Map.addLayer(classificationZones)
+~~~
+{:. .source language-javascript}
+
+### Assembling classification years
 To define our classification years, let's just write them all out by hand. If we had a lot of years, we might do something like `var classificationYears = ee.List.sequence(startYear, endYear)`, but sometimes it's nice to have objects on the client side instead of on the server side.
-```
+~~~
 var classificationYears = [2001, 2004, 2007, 2010, 2013, 2016]
-```
+~~~
+{:. .source language-javascript}
 
 ### Creating an input collection
 Using our areas of interest and our classification years, we are going to create a feature collection where the geometry of each feature is an area of interest and each feature has a `classificationYear` property. Then, when we want to run all of our export tasks, we will iterate over this collection.
 
 To create our collection of areas of interest and years, we are going to map over our collection of AOIs. At each AOI, we will take our list of classification years, and convert it to a feature collection by combining each with the AOI geometry. This results in a collection of collections, which we will finally flatten.
 
-When we export our images, we will need a way to keep each zone distinct; earth engine assets must al have unique names. So we'll also add a random column to our AOIs, which we will convert to a random integer between 0 and 100000.
+When we export our images, we will need a way to keep each zone distinct; earth engine assets must have unique names.
 
-```
+~~~
 function getAoiYearPairs(areasOfInterest, yearsOfInterest) {
   return ee.FeatureCollection(areasOfInterest)
-    .randomColumn('aoiNumber')
     .map(function(aoi) {
       var yearAoiPairs =  ee.List(classificationYears)
         .map(function(yearOfInterest) {
-          // We need a way to differentiate our AOIs when we export them. So, we take
-          // the random number that we added earlier, and convert it to an integer
-          var aoiNumber = ee.Number(aoi.get('aoiNumber')).multiply(100000).toInt()
           return aoi
             .set('year', yearOfInterest)
-            .set('aoiNumber', aoiNumber)
         })
       return ee.FeatureCollection(yearAoiPairs)
     })
     .flatten()
 }
 
-print(getAoiYearPairs(areasOfInterest, classificationYears))
-```
-
+print(getAoiYearPairs(classificationZones, classificationYears))
+~~~
+{:. .source .language-javascript}
 
 ## Classify-and-export Function
 
@@ -107,24 +129,47 @@ You'll notice that there are two places where we're getting an image: we get bot
 ### Get image
 Throughout the previous units, we have been discussing the ways to construct inputs for our classifications. For our `getImage` function, we're going to put a couple of those together. For this example, we will use a single season of Landsat 7 data with DEM data added.
 
+Let's copy and paste in our `maskLandsat` function from earlier.
+~~~
+function maskLandsat(image) {
+  // Bits 0, 3, 4 and 5 are fill, cloud shadow, snow, and cloud.
+  var fillBit = ee.Number(2).pow(0).int()
+  var cloudShadowBit = ee.Number(2).pow(3).int()
+  var snowBit = ee.Number(2).pow(4).int()
+  var cloudBit = ee.Number(2).pow(5).int()
 
-```
+  // Get the pixel QA band.
+  var qa = image.select('pixel_qa')
+
+  var radsatMask = image
+    .select('radsat_qa')
+    .eq(0)
+
+  var mask = radsatMask
+    .and(qa.bitwiseAnd(cloudShadowBit).eq(0))
+    .and(qa.bitwiseAnd(fillBit).eq(0))
+    .and(qa.bitwiseAnd(snowBit).eq(0))
+    .and(qa.bitwiseAnd(cloudBit).eq(0))
+    // .and(image.select('sr_atmos_opacity').lte(300))
+
+  return image
+    .updateMask(mask)
+    .select(['B1', 'B2', 'B3', 'B4', 'B5', 'B7'])
+}
+~~~
+{:. .source .language-javascript}
+
+~~~
 function getImage(classificationAoi, year) {
+  classificationAoi = ee.Geometry(classificationAoi)
   var satelliteCollection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
 
   // Create our temporal filters
-  // March 15 to May 15
-  var earlyTemporalFilter = getSeasons(year).slice(1,2)
-  // September 15 to November 15
-  var lateTemporalFilter = getSeasons(year).slice(4,5)
-
-  // Create our Landsat image for the first part of the year
-  var earlyLandsatImage = satelliteCollection
-    .filterBounds(classificationAoi)
-    .filter(earlyTemporalFilter)
-    .map(maskLandsatImage)
-    .median()
-    // .clip(classificationAoi)
+  var lateYearFilter = Filter.or(
+    ee.Filter.date( year - 1 + '-09-15',  year - 1 + '-11-15'),
+    ee.Filter.date( year     + '-09-15',  year     + '-11-15'),
+    ee.Filter.date( year + 1 + '-09-15',  year + 1 + '-11-15')
+  )
 
   // Create our Landsat image for the later part of the year
   var lateLandsatImage = satelliteCollection
@@ -132,25 +177,26 @@ function getImage(classificationAoi, year) {
     .filter(lateTemporalFilter)
     .map(maskLandsatImage)
     .median()
-    // .clip(classificationAoi)
 
   // Create DEM data, and add calculated bands
   var demData = ee.Algorithms.Terrain(ee.Image("USGS/SRTMGL1_003"))
-    // .clip(classificationAoi)
 
-  return earlyLandsatImage
-    .addBands(lateLandsatImage)
+  return lateLandsatImage
     .addBands(demData)
+    .clip(classificationAoi)
 }
-
-```
+~~~
+{:. .source .language-javascript}
 
 Let's test our function:
-```
-Map.addLayer(getImage(zoneGeometries[43], 2013), {bands: "B3, B2, B1", min:0, max:3000})
-```
+~~~
+Map.addLayer(getImage(classificationZones.first(), 2013), {bands: "B3, B2, B1", min:0, max:3000})
+~~~
 
-### Create a classify and export function
+## Create a classify and export function
+Now, we will create a function that will map over all of our images and classify them.
+
+
 
 #### Classify
 

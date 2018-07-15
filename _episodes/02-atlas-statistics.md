@@ -283,7 +283,7 @@ print(areaChart)
 > {:. .source .language-javascript}
 > > ## Solution
 > >
-> > Because we used `.get`, we need to cast `atlasClassCounts` to an `ee.Dictionary` type before we can use it further. Often, we need to cast after using a `.get` call. When you have an error message that's telling you that an object doesn't have a certain method (in this case, `.map`) but your *certain* that it does, it's a hint that you might need to use casting.
+> > Because we used `.get`, we need to cast `atlasClassCounts` to an `ee.Dictionary` type before we can use it further. Often, we need to cast after using a `.get` call. When you have an error message that's telling you that an object doesn't have a certain method (in this case, `.map`) but you are *certain* that it does, it's a hint that you might need to use casting.
 > > ~~~
 > > atlasClassCounts.map is not a function
 > > ~~~
