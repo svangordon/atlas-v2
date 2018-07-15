@@ -186,9 +186,17 @@ For the `from` list, we will use the list of Atlas classes we created using the 
 ~~~
 var atlasClasses = [1,2,3,4,6,7,8,9,10,11,12,13,14,15,21,22,23,24,25,27,28,29,31,32,78,99]
 var remappedImage = atlas_2000.remap(atlasClasses, ee.List.sequence(1, 26))
-Map.addLayer(remappedImage, {min:1, max:26, palette: atlasPalette}, 'Atlas Classification')
+/*Map.addLayer(remappedImage, {min:1, max:26, palette: atlasPalette}, 'Atlas Classification')*/
 ~~~
 {: source .language-javascript}
+
+We would like the original, non-remapped values to be available on that image, so let's add the original `b1` band back on the image.
+~~~
+Map.addLayer(remappedImage.addBands(atlas_2000), {min:1, max:26, palette: atlasPalette, bands:'remapped'}, 'Atlas Classification, original values available')
+~~~
+{:. .source .language-javascript}
+
+Try clicking around using the inspector a little bit.
 
 > ## Challenge
 >
@@ -197,8 +205,152 @@ Map.addLayer(remappedImage, {min:1, max:26, palette: atlasPalette}, 'Atlas Class
 > * [A MODIS color palette can be found here](https://lpdaac.usgs.gov/about/news_archive/modisterra_land_cover_types_yearly_l3_global_005deg_cmg_mod12c1). Try changing the Atlas palette so that it has the same colors as the MODIS dataset.
 {:. .challenge}
 
+Now, let's roll all of that code into a function. This will make things easier for us down the line: the next time that we want to display an Atlas image, we just invoke our function. The function will take as arguments an image to display and a title that should be used as that image's name.
+
+First we create the function's signature, ie, its name and its parameters.
+~~~
+function displayClassification(classificationImage, layerName) {
+~~~
+{:. .source .language-javascript}
+We want to **cast** the `classificationImage` to an `ee.Image()`. If we haven't talked about casting, we will soon. Basically, this means that we're telling Earth Engine that `classificationImage` is an `ee.Image`. Sometimes, Earth Engine isn't totally 100% sure what kind of Earth Engine object a certain variable is. For example, the value of `collection.first()` could be a feature, or it could be an image. This can cause problems. So, we are removing any ambiguity by telling Earth Engine that `classificationImage` is an image (and if it wasn't, it is now).
+~~~
+  // Cast classificationImage to Image
+  classificationImage = ee.Image(classificationImage)
+~~~
+{:. .source .language-javascript}  
+
+Now, let's create a palette for our classes. This is the same as the palette we used before, and in fact, if we didn't create this palette, the function would still work (when we used the variable `palette`, Earth Engine would look for a variable with the name `palette` inside of the function, and upon failing to find it, would look up another level for a variable named `palette`, and finding one, would use that value). However, we would like our function to be as self-contained as possible. We want it to be possible to paste this function into new code and not have to worry about whether or not we set up a `palette` variable, or to worry about whether we have another variable named `palette` that will conflict with the palette this function is using.
+~~~
+  var atlasPalette = [
+    "8400a8", // Forest / Forêt
+    "8bad8b", // Savanna / Savane
+    "000080", // Wetland - floodplain / Prairie marécageuse - vallée inondable
+    "ffcc99", // Steppe / Steppe
+    "808000", // Plantation / Plantation
+    "33cccc", // Mangrove / Mangrove
+    "ffff96", // Agriculture / Zone de culture
+    "3366ff", // Water bodies / Plans d'eau
+    "ff99cc", // Sandy area / surfaces sableuses
+    "969696", // Rocky land / Terrains rocheux
+    "a87000", // Bare soil / Sols dénudés
+    "ff0000", // Settlements / Habitations
+    "ccff66", // Irrigated agriculture / Cultures irriguées
+    "a95ce6", // Gallery forest and riparian forest / Forêt galerie et formation ripicole
+    "d296e6", // Degraded forest / Forêt dégradée
+    "a83800", // Bowe / Bowé
+    "f5a27a", // Thicket / Fourré
+    "ebc961", // Agriculture in shallows and recession / Cultures des bas-fonds et de décrue
+    "28734b", // Woodland / Forêt claire
+    "ebdf73", // Cropland and fallow with oil palms / Cultures et jachère sous palmier à huile
+    "beffa6", // Swamp forest / Forêt marécageuse
+    "a6c28c", // Sahelian short grass savanna / Savane sahélienne
+    "0a9696", // Herbaceous savanna / Savane herbacée
+    "749373", // Shrubland / Zone arbustive
+    "505050", // Open mine / Carrière
+    "FFFFFF"  // Cloud / Nuage
+  ]
+~~~
+{:. .source .language-javascript}
+Now we create our list of Atlas classes, taken from the USGS Atlas metadata files, and use that to remap our image.
+~~~
+  var atlasClasses = [1,2,3,4,6,7,8,9,10,11,12,13,14,15,21,22,23,24,25,27,28,29,31,32,78,99]
+  var remappedImage = classificationImage.remap(atlasClasses, ee.List.sequence(1, 26))
+~~~
+{:. .source .language-javascript}
+We add the remapped image to the original image. Again, the only reason we're doing this step is so that we can view the original class values in the inspector tab if we choose to do so.
+~~~
+  classificationImage = classificationImage.addBands(remappedImage)
+~~~
+{:. .source .language-javascript}
+We now add the image to the map. The minimum value is 1, the maximum value is the length of the list containing the atlasClasses, which is 26.
+~~~
+  Map.addLayer(classificationImage, {min: 1, max: 26, palette: atlasPalette, bands:'remapped'}, layerName)
+~~~
+{:. .source .language-javascript}
+And a closing curly brace to close the function body.
+~~~
+}
+~~~
+{:. .source language-javascript}
+
+Let's test out our function.
+~~~
+displayClassification(atlas_2000, 'Atlas 2000')
+~~~
+{:. .source .language-javascript}
+
 ## Displaying an `ImageCollection`
-It would be convenient to display the Atlas or Atlas V2 classification for each year in a collection. Let's first create a function to render an Atlas or Atlas V2 image for us. This function will take a classified `ee.Image()` and a string to use as the layer name. The function will remap the image and add it to the map.
+It would be convenient to display the Atlas or Atlas V2 classification for each year in a collection. There's an obstacle in our way, however. If you add an `ImageCollection` to the map, only the most recent image of the collection is displayed. Furthermore, `Map.addLayer` is a **client-side** operation. This means that it cannot take place inside of an `ee.Object.map` call. For example, we could not convert the AtlasV2 collection to a list, and then `.iterate()` over each image and display it.
+~~~
+// Will not work!
+atlasV2Collection.map(function(image) {
+    Map.addLayer(image)
+    return image
+  })
+~~~
+{:. .source .language-javascript}
+
+Any `ee.Object.map` call is taking place _on the server_. Once a process is pushed to the server, you can't know anything about it until it's all the way done. This means you cannot have a `print()` or `Map.addLayer()` call inside of an `ee.Object.map` call. One way to imagine this is that what your computer is doing locally is creating a set of instructions to send to the server. Once those instructions are sent, there's no going back: the Earth Engine servers can't interrupt their process to send you information part of the way through or to ask you for more information.
+
+As an analogy, imagine that you were asking a friend to do your shopping. You give them a list of things that you want, and send them off to the market, and then there is no communication between you and your shopper until they get back from the market. (Please ignore cellphones for the purposes of this example!) You could give them a set of instructions, such as: "buy one kilo of potatoes; buy the largest ham they have; buy a dozen eggs; buy a half kilo of brown sugar, or if they don't have brown sugar, buy a half kilo of white sugar and 300ml of molasses". But you could not give them a set of instructions that require them to interact with you _after_ they've gone to market. It wouldn't make any sense to say something like, "Go to the market, and show me the cabbages, and if I think that they look good, buy some". Because once you have given them that list of instructions and they've gone to the market, that is the end of your interactions with them until they've finished their shopping.
+
+Essentially, what our instructions are saying is "Go to the market, and go to the section where they have AtlasV2 images, and show me all of the AtlasV2 images". But that doesn't work, because our helper is already at the market, so they can't do a _client-side_ action like `Map.addLayer`.
+
+How are we going to deal with this? One possibility is that we could explicitly write out all of our instructions. We could say:
+~~~
+displayClassification(atlasV2_2000, "Atlas V2 2000")
+displayClassification(atlasV2_2001, "Atlas V2 2001")
+displayClassification(atlasV2_2002, "Atlas V2 2003")
+~~~
+{:. .source .language-javascript}
+
+> ## Duplicating text in the Editor
+>
+> It's a little time consuming to write out so many dates, but we can speed the process along by selecting a section of the code that you'd like to duplicate and pressing <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>.
+{:. .callout}
+
+This is essentially saying "Go get the AtlasV2 image for 2000, bring it back, and show it to me. Now go get the AtlasV2 image for 2001, bring it back, and show it to me. Now go get the AtlasV2 image for 2002, and bring it back, and show it to me." This is a perfectly fine way to perform this process, and sometimes in a pinch it really is your best option. However, it's a little bit on the time consuming side, and the more typing that we do, the more likely we are to make a mistake and the harder it will be to change our code later if we want it to do something a little bit different.
+
+So, we can't use `Map.addLayer` when we iterate over Earth Engine objects on the _server-side_. We can, however, use `Map.addLayer` when we iterate over JavaScript objects on the _client-side_. Earth Engine objects exist on the Earth Engine server, but JavaScript objects exist on our local machine (ie, your personal computer), and are used to create the instructions for the Earth Engine servers. And something we can do is turn a server-side object into a client-side object. When we turn a server-side object into a client-side object, we give Earth Engine a set of instructions to execute, like we do normally. But then, when Earth Engine finishes carrying out that set of instructions, we use the value that it returned to create a new set of instructions.
+
+To continue our shopping analogy, it would be like if you sent your friend to the market, asked him to write down how much of different items were available and their price, and then used that information to prepare another set of instructions and sent him back to the market. (Your friend is very obliging, I know!)
+
+In Earth Engine, there are two ways that we can turn an Earth Engine object into a JavaScript object. The most common way is with `.getInfo()`. `.getInfo` tells Earth Engine to stop everything and immediately send back a server-side object's value. The problem with `.getInfo()` is that it totally halts all execution of code until Earth Engine has determined what an object's value is. This is an issue if we are trying to use `.getInfo()` with a long running process or with a calculation that takes a long time to complete, and in such a case we would use `.evaluate`, but for our example `.getInfo` is appropriate.
+
+To display our collection, we will turn the Earth Engine object `atlasV2Collection` into a local JavaScript object (a dictionary). That object will have the property `features`, which will contain a list of all the images in the collection. Each image will have the property `id`, which will contain a string, which will allow us to create an `ee.Image` object to add to the map. We will iterate over the collection using the method `.forEach`, which is a method available only on local JavaScript objects (ie, it is not available on server-side Earth Engine objects).
+~~~
+atlasV2Collection.getInfo().features.forEach(function(image, index) {
+  displayClassification(ee.Image(image.id), index + 2000)
+  })
+~~~
+{:. .source .language-javascript}
+
+ <!-- imagine that you are planning to make a dessert. You would like to make a Tarte aux pommes (apple pie), but you are worried that the store might be out of apples. If the store is out of apples, you will make a Quatre-quarts (pound cake) instead. But, you are relying upon your friend to do all the shopping for you, and your friend isn't very good at making decisions.  this would be like if you told your friend "Go to the market, and see if they have sugar, flour, apples, milk, and butter". Then your friend goes to the market, and reports back that they  -->
+
+Any variable created as an **object literal** is a local object until it is turned into an Earth Engine object. The below are all examples of object literals.
+
+~~~
+var jsList = [1, 2, 3]
+var jsDictionary = {
+  'a': 1,
+  'b': 2
+}
+var jsNumber = 3
+var jsString = 'This is a string!'
+~~~
+{:. .source .language-javascript}
+
+All of these types exist as Earth Engine objects as well. In fact, Earth Engine objects of the corresponding types are typically created by passing a JavaScript object to an `ee.Object` creator (and this is what you've been doing up to this point, you just haven't realized it).
+~~~
+var eeList = ee.List(jsList)
+var eeDictionary = ee.Dictionary(jsDictionary)
+// And so forth
+~~~
+{:. .source .language-javascript}
+
+So, if we have a JavaScript list where each element is
+
+Let's first create a function to render an Atlas or Atlas V2 image for us. This function will take a classified `ee.Image()` and a string to use as the layer name. The function will remap the image and add it to the map.
 
 ~~~
 function displayClassification(classificationImage, layerName) {
@@ -253,10 +405,6 @@ But this is time consuming, and we're likely to make a typo in the process. And 
 <!-- Possibly, remove this section. It requires a lot of typing, and requires us to use client side objects in a way that server side objects cannot be used. -->
 But there's another way that we can do this. We can create a list of dates and iterate over that list, filtering the Atlas V2 collection with each date and displaying the result.
 
-> ## Duplicating text in the Editor
->
-> It's a little time consuming to write out so many dates, but we can speed the process along by selecting a section of the code that you'd like to duplicate and pressing <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>.
-{:. .callout}
 
 ~~~
 function displayClassificationCollection(classificationCollection, startDate, numberOfYears) {

@@ -21,7 +21,7 @@ keypoints:
 
 In our last exercise, we rendered the Atlas and AtlasV2 images to the Earth Engine map. We will now explore ways to get more detailed statistics about the classifications.
 
-We'll start by performing some statistical analysis on the Atlas dataset, including class areas and class histograms. This dataset is easier to work with, because it has fewer pixels. We'll look at getting statistics for custom geometries as well as at the national level. Then, we'll use those methods on the Atlas V2 dataset, and learn how to adjust our methods for that dataset. Using the Atlas V2 dataset, we'll look at some more complex measures, like statistics for land cover class conversion.
+We'll start by performing some statistical analysis on the datasets, including class areas and class histograms. We'll look at getting statistics for custom geometries as well as at the national level. Then, we will look at ways that we can display charts expressing information about those datasets in Earth Engine.
 
 ## Setup
 

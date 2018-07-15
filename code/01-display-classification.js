@@ -82,37 +82,50 @@ function displayClassification(classificationImage, layerName) {
   ]
   var atlasClasses = [1,2,3,4,6,7,8,9,10,11,12,13,14,15,21,22,23,24,25,27,28,29,31,32,78,99]
   var remappedImage = classificationImage.remap(atlasClasses, ee.List.sequence(1, 26))
-  Map.addLayer(remappedImage, {min:1, max:26, palette: atlasPalette}, layerName)
+  classificationImage = classificationImage.addBands(remappedImage)
+  Map.addLayer(classificationImage, {min:1, max:26, palette: atlasPalette, bands:'remapped'}, layerName)
 }
 
-function displayClassificationCollection(classificationCollection) {
-  // Create a list of strings that are valid as EE dates (YYYY-MM-DD)
-  var atlasV2Years = [
-    "2000-01-01",
-    "2001-01-01",
-    "2002-01-01",
-    "2003-01-01",
-    "2004-01-01",
-    "2005-01-01",
-    "2006-01-01",
-    "2007-01-01",
-    "2008-01-01",
-    "2009-01-01",
-    "2010-01-01",
-    "2011-01-01",
-    "2012-01-01",
-    "2013-01-01",
-    "2014-01-01",
-    "2015-01-01",
-    "2016-01-01",
-  ]
+displayClassification(atlas_2000, 'Atlas 2000')
 
-  atlasV2Years.forEach(function(year) {
-      var classificationImage = classificationCollection
-        .filterDate(year)
-        .first()
-      displayClassification(classificationImage, "Atlas V2 " + year)
-    })
-}
+// // Will not work!
+// atlasV2Collection.toList(100).map(function(image) {
+//     Map.addLayer(ee.Image(image).getInfo())
+//     return image
+//   })
 
-displayClassificationCollection(atlasV2Collection)
+atlasV2Collection.getInfo().features.forEach(function(image, index) {
+  displayClassification(ee.Image(image.id), "AtlasV2 " + (index + 2000))
+})
+
+// function displayClassificationCollection(classificationCollection) {
+//   // Create a list of strings that are valid as EE dates (YYYY-MM-DD)
+//   var atlasV2Years = [
+//     "2000-01-01",
+//     "2001-01-01",
+//     "2002-01-01",
+//     "2003-01-01",
+//     "2004-01-01",
+//     "2005-01-01",
+//     "2006-01-01",
+//     "2007-01-01",
+//     "2008-01-01",
+//     "2009-01-01",
+//     "2010-01-01",
+//     "2011-01-01",
+//     "2012-01-01",
+//     "2013-01-01",
+//     "2014-01-01",
+//     "2015-01-01",
+//     "2016-01-01",
+//   ]
+//
+//   atlasV2Years.forEach(function(year) {
+//       var classificationImage = classificationCollection
+//         .filterDate(year)
+//         .first()
+//       displayClassification(classificationImage, "Atlas V2 " + year)
+//     })
+// }
+//
+// displayClassificationCollection(atlasV2Collection)

@@ -2,7 +2,7 @@
 var workshopTools = require('users/svangordon/lulc-conference:workshopTools')
 var displayAtlasClassification = workshopTools.displayAtlasClassification
 var atlasV2_2013 = ee.Image('users/svangordon/conference/atlas_v2/classify/2013')
-var atlasV2Collection = workshopTools.atlasV2Collection
+var atlasV2Collection = ee.ImageCollection('users/svangordon/conference/atlas_v2/collections/classify')
 
 var imageReduction = atlasV2_2013.reduceRegion({
     reducer: ee.Reducer.frequencyHistogram(),
