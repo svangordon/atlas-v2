@@ -241,6 +241,7 @@ displayClassification(atlasV2_2002, "Atlas V2 2003")
 
 But this is time consuming, and we're likely to make a typo in the process. And if we decided that instead of displaying Atlas V2 data we wanted to display the Atlas data, we would have to type it all out again.
 
+<!-- Possibly, remove this section. It requires a lot of typing, and requires us to use client side objects in a way that server side objects cannot be used. -->
 But there's another way that we can do this. We can create a list of dates and iterate over that list, filtering the Atlas V2 collection with each date and displaying the result.
 
 > ## Duplicating text in the Editor
@@ -249,7 +250,7 @@ But there's another way that we can do this. We can create a list of dates and i
 {:. .callout}
 
 ~~~
-function displayClassificationCollection(classificationCollection) {  
+function displayClassificationCollection(classificationCollection, startDate, numberOfYears) {
   // Create a list of strings that are valid as EE dates (YYYY-MM-DD)
   var atlasV2Years = [
     "2000-01-01",
@@ -288,7 +289,7 @@ displayClassificationCollection(atlasV2Collection)
 > With the entire Atlas V2 dataset displayed in the map, you can enable and disable different layers to see land cover changes over time. Let's spend a little time to look through the map. Maybe go to an area that you know well, or that you are interested in. What ways do you think that the Atlas V2 dataset might be useful? In what ways do you think that it needs to be improved?
 {:. .challenge}
 
-
+<!-- Probably, remove this too. -->
 ## Adding scripts to a repository
 
 The `displayClassification` and `displayClassificationCollection` tools are convenient. We would like to be able to access them in other scripts. In Earth Engine, it's possible to export a function or a variable from one script and import it into another.
