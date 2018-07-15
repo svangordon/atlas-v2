@@ -325,138 +325,17 @@ atlasV2Collection.getInfo().features.forEach(function(image, index) {
 ~~~
 {:. .source .language-javascript}
 
- <!-- imagine that you are planning to make a dessert. You would like to make a Tarte aux pommes (apple pie), but you are worried that the store might be out of apples. If the store is out of apples, you will make a Quatre-quarts (pound cake) instead. But, you are relying upon your friend to do all the shopping for you, and your friend isn't very good at making decisions.  this would be like if you told your friend "Go to the market, and see if they have sugar, flour, apples, milk, and butter". Then your friend goes to the market, and reports back that they  -->
-
-Any variable created as an **object literal** is a local object until it is turned into an Earth Engine object. The below are all examples of object literals.
-
-~~~
-var jsList = [1, 2, 3]
-var jsDictionary = {
-  'a': 1,
-  'b': 2
-}
-var jsNumber = 3
-var jsString = 'This is a string!'
-~~~
-{:. .source .language-javascript}
-
-All of these types exist as Earth Engine objects as well. In fact, Earth Engine objects of the corresponding types are typically created by passing a JavaScript object to an `ee.Object` creator (and this is what you've been doing up to this point, you just haven't realized it).
-~~~
-var eeList = ee.List(jsList)
-var eeDictionary = ee.Dictionary(jsDictionary)
-// And so forth
-~~~
-{:. .source .language-javascript}
-
-So, if we have a JavaScript list where each element is
-
-Let's first create a function to render an Atlas or Atlas V2 image for us. This function will take a classified `ee.Image()` and a string to use as the layer name. The function will remap the image and add it to the map.
-
-~~~
-function displayClassification(classificationImage, layerName) {
-  // Cast classificationImage to Image
-  classificationImage = ee.Image(classificationImage)
-
-  var atlasPalette = [
-    "8400a8", // Forest / Forêt
-    "8bad8b", // Savanna / Savane
-    "000080", // Wetland - floodplain / Prairie marécageuse - vallée inondable
-    "ffcc99", // Steppe / Steppe
-    "808000", // Plantation / Plantation
-    "33cccc", // Mangrove / Mangrove
-    "ffff96", // Agriculture / Zone de culture
-    "3366ff", // Water bodies / Plans d'eau
-    "ff99cc", // Sandy area / surfaces sableuses
-    "969696", // Rocky land / Terrains rocheux
-    "a87000", // Bare soil / Sols dénudés
-    "ff0000", // Settlements / Habitations
-    "ccff66", // Irrigated agriculture / Cultures irriguées
-    "a95ce6", // Gallery forest and riparian forest / Forêt galerie et formation ripicole
-    "d296e6", // Degraded forest / Forêt dégradée
-    "a83800", // Bowe / Bowé
-    "f5a27a", // Thicket / Fourré
-    "ebc961", // Agriculture in shallows and recession / Cultures des bas-fonds et de décrue
-    "28734b", // Woodland / Forêt claire
-    "ebdf73", // Cropland and fallow with oil palms / Cultures et jachère sous palmier à huile
-    "beffa6", // Swamp forest / Forêt marécageuse
-    "a6c28c", // Sahelian short grass savanna / Savane sahélienne
-    "0a9696", // Herbaceous savanna / Savane herbacée
-    "749373", // Shrubland / Zone arbustive
-    "505050", // Open mine / Carrière
-    "FFFFFF"  // Cloud / Nuage
-  ]
-  var atlasClasses = [1,2,3,4,6,7,8,9,10,11,12,13,14,15,21,22,23,24,25,27,28,29,31,32,78,99]
-  var remappedImage = atlas_2000.remap(atlasClasses, ee.List.sequence(1, 26))
-  Map.addLayer(remappedImage, {min:1, max:26, palette: atlasPalette}, layerName)  
-}
-~~~
-{:. .source .language-javascript}
-
-We would like to display an image for every year in the Atlas V2 dataset. We could write out every single year in the dataset:
-~~~
-displayClassification(atlasV2_2000, "Atlas V2 2000")
-displayClassification(atlasV2_2001, "Atlas V2 2001")
-displayClassification(atlasV2_2002, "Atlas V2 2003")
-~~~
-{:. .source .language-javascript}
-
-But this is time consuming, and we're likely to make a typo in the process. And if we decided that instead of displaying Atlas V2 data we wanted to display the Atlas data, we would have to type it all out again.
-
-<!-- Possibly, remove this section. It requires a lot of typing, and requires us to use client side objects in a way that server side objects cannot be used. -->
-But there's another way that we can do this. We can create a list of dates and iterate over that list, filtering the Atlas V2 collection with each date and displaying the result.
-
-
-~~~
-function displayClassificationCollection(classificationCollection, startDate, numberOfYears) {
-  // Create a list of strings that are valid as EE dates (YYYY-MM-DD)
-  var atlasV2Years = [
-    "2000-01-01",
-    "2001-01-01",
-    "2002-01-01",
-    "2003-01-01",
-    "2004-01-01",
-    "2005-01-01",
-    "2006-01-01",
-    "2007-01-01",
-    "2008-01-01",
-    "2009-01-01",
-    "2010-01-01",
-    "2011-01-01",
-    "2012-01-01",
-    "2013-01-01",
-    "2014-01-01",
-    "2015-01-01",
-    "2016-01-01",  
-  ]
-
-  atlasV2Years.forEach(function(year) {
-      var classificationImage = classificationCollection
-        .filterDate(year)
-        .first()
-      displayClassification(classificationImage, "Atlas V2 " + year)
-    })
-}
-
-displayClassificationCollection(atlasV2Collection)
-~~~
-{:. .source .language-javascript}
-
-> ## Observing land cover changes with Atlas V2
->
-> With the entire Atlas V2 dataset displayed in the map, you can enable and disable different layers to see land cover changes over time. Let's spend a little time to look through the map. Maybe go to an area that you know well, or that you are interested in. What ways do you think that the Atlas V2 dataset might be useful? In what ways do you think that it needs to be improved?
-{:. .challenge}
 
 <!-- Probably, remove this too. -->
 ## Adding scripts to a repository
 
-The `displayClassification` and `displayClassificationCollection` tools are convenient. We would like to be able to access them in other scripts. In Earth Engine, it's possible to export a function or a variable from one script and import it into another.
+The `displayClassification` tool is convenient. We would like to be able to access it in other scripts. In Earth Engine, it's possible to export a function or a variable from one script and import it into another.
 
-In our Scripts tab, create a new file called **workshopTools**. Paste the `displayClassification` and `displayClassificationCollection` scripts into that file.
+In our Scripts tab, create a new file called **workshopTools**. Paste the `displayClassification` script into that file.
 
 Add the objects that you want to export as properties on the `exports` object.
 ~~~
 exports.displayClassification = displayClassification
-exports.displayClassificationCollection = displayClassificationCollection
 ~~~
 {:. .source .language-javascript}
 
