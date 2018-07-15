@@ -209,6 +209,42 @@ print('country areas', regionalAreas)
 ~~~
 {:. .source .language-javascript}
 
+## Exporting an Image
+
+You might like to export a region of a classified image so that you can use it outside of Earth Engine. We can do this by exporting the image to Google Drive.
+
+~~~
+// Export a classified Image
+
+Export.image.toDrive({
+  image: atlasV2_2013,
+  folder: 'classifiedLulc',
+  region: countryGeometry,
+  fileNamePrefix: 'atlasV2_2013',
+  scale: 30,
+  description: 'atlasV2_2013',
+  maxPixels: 1e13
+});
+~~~
+{:. .source .language-javascript}
+
+This outputs the image as a `.tiff` file. That's an ideal choice if you are planning to work with the image in another kind of GIS software, such as QGis. But, if you would prefer to display the image in a way that's easier to display -- for example, if you want an image for a presentation, or to put on a website, you will want to conver the image to RGB format. Use the `.visualize` method, and pass the visualization parameters you would usually use to display the image on the map. Earth Engine will convert the image to a three band RGB image.
+
+~~~
+// Export a classified Image
+
+Export.image.toDrive({
+  image: atlasV2_2013.visualize(atlasVisParams),
+  folder: 'classifiedLulc',
+  region: classificationZone,
+  fileNamePrefix: 'atlasV2_2013',
+  scale: 30,
+  description: 'atlasV2_2013',
+  maxPixels: 1e13
+});
+~~~
+{:. .source .language-javascript}
+
 ## Display Area as Bar Chart
 
 Let's display the class counts as a bar chart, using the `ui.Chart.feature` methods. `ui.Chart.feature` displays a `ee.FeatureCollection`, so we will convert our dictionaries of areas into features and turn those features into a feature collection.
@@ -250,6 +286,14 @@ var chartLabels = nameDictionaryFrench.select(chartInput.propertyNames()).getInf
 > The `.getInfo()` method converts an Earth Engine object on the Google server into a local JavaScript object. It is similar to the `print()` function: both make a request to the Earth Engine servers, and return a value. But while the `print()` function gets a value and displays it in the console, `.getInfo()` makes it available in the code. Furthermore, `.getInfo` halts the execution of our script while waiting for the Earth Engine servers to return a value. Because it pauses the running of your script, use `.getInfo()` sparingly. We mostly only need it when we need to provide a local function, such as `Map.addLayer` or `ui.Chart`, with a value that we need to calculate from Earth Engine objects.
 {:. .callout}
 
+> ## Why does it take so long?
+>
+> The first time that you run this script, it will probably take a very long time to run, and your browser window will be unresponsive. Why is that?
+>
+> `.getInfo()` halts all code execution until a value is returned from the Earth Engine servers. If it takes a long time for the Earth Engine servers to calculate what value should be returned from the `.getInfo` call, then your browser will be frozen for a long time.
+>
+> After the `.getInfo` call completes the first time, running the script over again will not take very long at all. Why is that? Earth Engine uses **caching**. Remember, what you are sending to the Earth Engine servers is actually a set of instructions. Earth Engine holds on to the results from a given set of instructions for about 24 hours. If it encounters _exactly_ the same set of instructions during that period, it will immediately return the result for that set of instructions instead of recalculating those instructions.
+
 We would like our scale to be logarithmic, so we will set that option for the vertical axis.
 ~~~
 var areaChart = ui.Chart.feature.byProperty(ee.FeatureCollection(chartInput), chartLabels)
@@ -258,6 +302,11 @@ var areaChart = ui.Chart.feature.byProperty(ee.FeatureCollection(chartInput), ch
 It would be nice if we could style our chart a little bit. We can set a number of options for our chart; more information is available on the Google Charts page (but be aware that not all functionality in Google Charts is available in Earth Engine).
 
 We're going to use `.setOptions` to label our X and Y axes, and to set our Y axis to logarithmic scale.
+> ## Google Charts
+>
+> Earth Engine displays charts through the Google Charts API. To read more about what kinds of options are available, you can read the [Google Charts documentation](https://developers.google.com/chart/interactive/docs/gallery/linechart). Unfortunately, the API isn't very well documented, and a lot of the options that are available in Google Charts aren't available in Earth Engine: you're kind of shooting in the dark here.
+{:. .callout}
+
 ~~~
   .setOptions({
     vAxis: {

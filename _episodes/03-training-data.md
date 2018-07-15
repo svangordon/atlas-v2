@@ -1,5 +1,5 @@
 ---
-title: "Sampling Training Data"
+title: "Compiling Training Data"
 teaching: 5
 exercises: 30
 questions:
@@ -16,7 +16,7 @@ keypoints:
 - Landsat images can be filtered for clouds with the `radsat_qa` and `pixel_qa` bands
 ---
 
-## Overview of the Atlas v2 process
+## Overview of the AtlasV2 process
 Up to this point, we've discussed how to use and interact with the Atlas and Atlas V2 data. We're now going to begin to talk more about how you can use this process to produce your own land cover datasets. We will first give a rudimentary overview of the whole process, including assembling training data, sampling data, training a classifier, and classifying images. After we have gone through the whole process, we will discuss ways to improve the performance of the datasets and how to perform the process on a larger scale.
 
 In this section, we will discuss assembling the satellite imagery that will be used to train our classifier.
