@@ -104,8 +104,6 @@ function getLandsatImage(geometry) {
 
 var labelProjection = atlasImage.projection()
 
-var zonePoints = getPoints(classificationZone)
-
 var landsatBands = ee.List(['B1', 'B2', 'B3', 'B4', 'B5', 'B7'])
 
 function assessClassification(trainingImage, samplingPoints, trainingBands, title) {
@@ -132,6 +130,13 @@ function assessClassification(trainingImage, samplingPoints, trainingBands, titl
   // print(title, "kappa score:", testingData.classify(classifier).errorMatrix('b1', 'classification').kappa())
   displayAtlasClassification(trainingImage.classify(classifier), title)
 }
+
+/*
+  Classify an area of interest
+*/
+var zonePoints = getPoints(classificationZone)
+assessClassification(zoneImage, zonePoints, landsatBands, 'zone classification')
+
 
 /*
   Including neighboring zones
@@ -167,8 +172,6 @@ var neighborPoints = ee.Image
   Get testing points
 */
 print('zonePoints', zonePoints)
-print('zonepoints first geom', ee.Feature(zonePoints.first()).select(['^system']))
-print('zonepoints first geom', ee.Feature(zonePoints.first()).get('geometry'))
 // Get Zone Data
 var zoneData = zoneImage
   .addBands(ee.Image.pixelLonLat())
@@ -235,7 +238,6 @@ print('Accuracy (zone testing set):', zoneTestingData.classify(expandedClassifie
 displayAtlasClassification(zoneImage.classify(expandedClassifier), 'w/ neighbor classification')
 
 assessClassification(neighborImage, neighborPoints, landsatBands, 'neighbor classification')
-assessClassification(zoneImage, zonePoints, landsatBands, 'zone classification')
 
 print('training data histogram', trainingData.aggregate_histogram('b1'))
 print('combined area histogram', zoneData.merge(expandedData).aggregate_histogram('b1'))
