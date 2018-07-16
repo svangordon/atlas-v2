@@ -80,10 +80,21 @@ You may notice that the `.reduceRegion()` reduction still works. Is there a way 
 
 Using raster math, we can create images where the value of each pixel reflects its class in the two years, and then take the histogram of that image.
 
-Class values are two digit numbers (ie, integers 1 - 99). Because of this, if we multiply Year 1 by 100 and add Year 2, the values of the resulting image will be a four digit number where the first two digits represent the class in Year 1 and the second two digits represent the class in Year 2.
+Class values are two digit numbers (ie, integers 1 - 99). Because of this, if we multiply Year 1 by 100 and add Year 2, the values of the resulting image will be a four digit number where the first two digits represent the class in Year 1 and the second two digits represent the class in Year 2. We will call the resulting value the _transition value_. The _transition from_ class is equal to the remainder of the transition value divided by 100. The _transition to_ class is equal to the floored (rounded down) result of the transition value divided by 100.
 
+> ## Why 100?
+>
+> Why is 100 the number we multiply and divide by? What number would we use if our classes were 0 - 9? What class would we use if our highest class was 600?
+{:. .challenge}
+
+So, we first create the packed image by multiplying the 2013 image by 100 and adding the 2014 image.
 ~~~
 var packedImage = atlasV2_2013.multiply(100).add(atlasV2_2014)
+~~~
+{:. .source .language-javascript}
+
+We then take the frequency histogram of the packed image, just as we did when we were calculating class areas.
+~~~
 var packedHistogram = packedImage.reduceRegion({
     reducer: ee.Reducer.frequencyHistogram(),
     scale: 30,
@@ -92,255 +103,154 @@ var packedHistogram = packedImage.reduceRegion({
 print('packedHistogram', packedHistogram)
 ~~~
 {:. .source .language-javascript}
-
-## Getting Image Centerpoints
-
-The Atlas is, essentially, a grid of hand classified Landsat pixels at 2km resolution. To sample it, we want to create a collection of Atlas pixel centerpoints. To do that, we're going to use the same technique as we used to create the classification zones.
-
-First, we need to import our label image. It's important that our sampling points have the same projection as the Atlas data; we need to make sure that we're sampling exactly the pixel that was classified in the Atlas data.
 ~~~
-var atlasImage = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
-var labelProjection = atlasImage.projection()
+packedHistogram
+Object (1 property)
+  b1: Object (445 properties)
+    1002: 527
+    1003: 3683
+    1004: 11976396
+    1006: 278
+    1007: 2543
+    1008: 14686
+    1009: 3325
+    ...
+~~~
+{:. .output}
+
+## Unpacking Transitions
+We will now convert our histogram of transition values into a feature collection.
+
+Our pixels are all 30m, so we have the same conversion coefficient.
+~~~
+var conversionCoefficient = 0.0009
 ~~~
 {:. .source .language-javascript}
 
-First we create an image on random values.
+So we take the `b1` property of the histogram, and cast it to a dictionary.
 ~~~
-var centerpoints = ee.Image
-  .random()
-  .multiply(100000)
-  .toInt()
+var transitionCollection = ee.Dictionary(packedHistogram.get('b1'))
 ~~~
 {:. .source .language-javascript}
 
-Then we reduce that raster image to vectors. We pass the label projection, the classification zone, and the scale of the Atlas images.
+Then we map over the resulting dictionary. The function we pass to `.map()` iterates over every key-value pair, and takes the key and the value as its parameters.
 ~~~
-  .reduceToVectors({
-    crs: labelProjection,
-    geometry: classificationZone,
-    scale: 2000
-  })
-  .aside(function(pixelVectors) {
-    Map.addLayer(pixelVectors, {}, 'vectorized Atlas pixels')
-  })
-~~~
-{:. .code .language-javascript}
-
-We have turned our pixels into polygons, now we want to turn our polygons into centerpoints. We map over the collection of vectors, and convert each one into its centroid.
-~~~
-  .map(function(feature) {
-    var centroid = feature.centroid(5)
-    return centroid
-  })
+  .map(function(transitionValue, pixelCount) {
 ~~~
 {:. .source .language-javascript}
 
-## Sampling Landsat Image
-This Landsat image can now be sampled using the `.sampleRegions` method, similar to other images.
-
+First we convert our pixel count to an area, same as we did for the basic statistics.
 ~~~
-var landsatData = landsatImage.sampleRegions({
-  collection: samplingPoints,
-  scale: landsatImage.projection().nominalScale()
-})
+    var transitionArea = ee.Number(pixelCount).multiply(conversionCoefficient)
 ~~~
 {:. .source .language-javascript}
 
-## Adding Label Data
-To include our Atlas label data, we add that image to the landsat image with:
+Then we calculate the `transitionFrom` class. This is the first two digits of the `transitionValue`, which we calculate as the result of floored division of the `transitionValue` by 100.
 ~~~
-...
-  .addBands(atlasImage)
-...
+    var transitionFrom = ee.Number.parse(transitionValue).divide(100).floor()
 ~~~
 {:. .source .language-javascript}
 
-## Preserving Location Data
-If you try to add our data feature collection to the map, you will discover that the features don't have any kind of geometry.
-
+Now we calculate the `transitionTo` class. This is the remainder (ie, modulus dividend) of the `transitionValue` divided by 100.
 ~~~
-print(landsatData.geometry())
-~~~
-{:. .source .language-javascript}
-~~~
-MultiPoint, 0 vertices
-  type: MultiPoint
-  coordinates: []
-  geodesic: false
-~~~
-{:. .output .language-javascript}
-
-~~~
-~~~
-{:. }
-
-This means we don't know where each datapoint came from! Let's fix this.
-
-We'll add ee.Image.pixelLonLat() to the image. This is an image where each pixel knows its own longitude and latitude.
-~~~
-landsatData = landsatImage
-  .addBands(ee.Image.pixelLonLat())
-~~~
-{:. .code .language-javascript}
-We'll also add the Atlas labels.
-~~~
-  .addBands(atlasImage)
-~~~
-{:. .code .language-javascript}
-You can see that the features have their lon/lat coordinates as columns.
-~~~
-  .aside(function(collection) {
-    print(collection)
-  })
+    var transitionTo = ee.Number.parse(transitionValue).mod(100)
 ~~~
 {:. .source .language-javascript}
 
-Then we will map over all of the features, remove their lon/lat coordinates, and turn them into geometries.
-
+We now create a feature using those values and return it.
 ~~~
-  .map(function (feature) {
-    feature = ee.Feature(feature)
-    return ee.Feature(
-      ee.Geometry.Point([feature.get('longitude'), feature.get('latitude')]),
-      feature.toDictionary().remove(['longitude', 'latitude']))
-  })
-  .aside(function(collection) {
-    print(collection)
-  })
-~~~
-{:. .source .language-javascript}
-
-<!-- ## Creating Training and Testing  -->
-<br>
-We now would like to get the centerpoint of each pixel in our Atlas image.The process is like this:
-* Create an image of random numbers at the same scale and projection as the Atlas image.
-* Convert that raster image into a collection of vectors, so that each pixel is converted to a 2km square.
-* Convert each of those vectors to its centerpoint
-```
-function getCenterPoints(geometry, image) {
-  // Get the images projection and scale.
-  var crs = ee.Image(image).projection()
-  var scale = crs.nominalScale()
-
-  // Construct an image where each pixel is a random value, and we are certain
-  // that no adjacent pixels have the same value. Then reduce that image to a
-  // collection of polygons of size `scale`. then convert each polygon to its
-  // centroid, with an error margin of 10m.
-  var centerpoints = ee.Image
-    .random()
-    .multiply(100000)
-    .toInt()
-    .reduceToVectors({
-      crs: crs,
-      geometry: geometry,
-      scale: scale
+    var transitionFeature = ee.Feature(null, {
+      'transitionFrom': transitionFrom,
+      'transitionTo': transitionTo,
+      'transitionAreaKm': transitionArea
     })
-    .map(function(feature) {
-      var centroid = feature.centroid(10)
-      return centroid
-    })
-  return centerpoints
-}
-```
-
-Let's see how this looks:
-
-```
-var samplingPoints = getCenterPoints(aoi, atlas_2013)
-print(samplingPoints)
-Map.addLayer(samplingPoints)
-```
-
-<img src="../fig/04-atlas-with-centerpoints.png" border = "10">
-
-Great! We now have a collection of points we can use to sample our collection of images. First, however, we will need to split these points into a training set and a validation set.
-
-## Training and Validation Split
-
-Before we sample our images, we want to divide our sampling points into a collection of training points (used to training the classifier) and a collection of validation points (used to assess the classifiers accuracy). It is important to assess the classifiers accuracy by testing it on datapoints it has never seen before, so that we can understand how well the classifier can be expected to perform on new images. Furthermore, we are going to split the sampling points into training and validation sets _before_ we sample, rather than sampling the images and _then_ splitting into training and validation sets, because we are sampling a collection of images, rather than a single composited image. We want to make sure that the points that we are using to assess the classifier's accuracy are points that it has never seen before.
-
-The process of splitting a feature collection is fairly straight forward:
-* Add a column containing a random number to the feature collection using `.random()`
-* Use that column to split the dataset.
-
-```
-function trainTestSplit(collection, trainingSize) {
-
-  // Add a column with a random value between 0.0 and 1.0 to each feature.
-  // Provide a seed number (0) so that the results are consistent across runs.
-  var withRandom = collection.randomColumn('random', 0);
-
-  // Any features with a random value below our training size value go in training;
-  // the rest go in testing.
-  var trainingPartition = withRandom.filter(ee.Filter.lt('random', trainingSize));
-  var testingPartition = withRandom.filter(ee.Filter.gte('random', trainingSize));
-  return [trainingPartition, testingPartition]
-}
-```
-
-Let's split the sampling points, and take a look at them on the map. Training points are in blue, testing points are in red.
-
-```
-var partitions = trainTestSplit(samplingPoints, 0.7)
-var trainingPoints = partitions[0]
-var testingPoints = partitions[1]
-Map.addLayer(trainingPoints, {palette: ['blue']}, 'trainingPoints')
-Map.addLayer(testingPoints, {palette: ['red']}, 'testingPoints')
-```
-<img src="../fig/04-training-testing-split.png" border = "10">
-
-Excellent! Now, let's sample the images that we put together before.
-
-## Sampling images
-
-We would now like to sample our images. For this we need:
-* An image or image collection of feature images (we want the flexibility to sample collections, if we want)
-* A label image (eg, the Atlas 2013 image)
-* A geometry to sample (eg, a collection of sampling points)
-
-To do this sampling, we're going to map over every feature image, add the label image, and return the result of sampling that image at the sampling points.
-
-By default, when we sample an image, the resulting features do not have geometries. We would like to hold on to the feature geometries, so that we can know what features came from where. To do this, we will add longitude and latitude bands to our image using `ee.Image.pixelLonLat()`, and then use that information to create geometries for our features.
-
-```
-function toPoints(fc) {
-  return ee.FeatureCollection(fc).map(function(f) {
-    f = ee.Feature(f)
-    return ee.Feature(
-      ee.Geometry.Point([f.get('longitude'), f.get('latitude')]),
-      f.toDictionary().remove(['longitude', 'latitude']))
+    return transitionFeature
   })
-}
+~~~
+{:. .source .language-javascript}
 
-function sampleCollection(featureImages, labelImage, samplingGeometry) {
-  // Cast feature images to an image collection
-  featureImages = ee.ImageCollection(featureImages)
+We then take the `.values` of the dictionary and cast it to a collection.
+~~~
+  .values()
 
-  // What scale we want to sample at. Remember, we always want to pass
-  // A scale to Earth Engine. Landsat is at 30m; if we switch to a different satellite
-  // dataset (for example, Sentinel) we will need to change this
-  var samplingScale = 30;
+transitionCollection = ee.FeatureCollection(transitionCollection)
+~~~
+{:. .source .language-javascript}
 
-  return featureImages.map(function(featureImage) {
-    var datapoints = featureImage
-    .addBands(labelImage)
-    .addBands(ee.Image.pixelLonLat())
-    .sampleRegions({
-      collection: ee.FeatureCollection(samplingGeometry),
-      scale: samplingScale
-    })
-    return toPoints(datapoints)
+We can now display and export our collection of transition information.
+~~~
+print('transitionCollection', transitionCollection)
+
+Export.table.toDrive({
+  collection: transitionCollection,
+  folder: "eeExports",
+  fileFormat: "CSV",
+  description: "transitionCollection2013to2014"
+});
+~~~
+{:. .source .language-javascript}
+
+## Transition Statistics for Multiple Years
+Now that we have created transition statistics using two images (2013 and 2014), we would like to explore creating transition statistics with multiple years. We want to process a collection of year pairs beginning in 2000 and ending in 2015, meaning we can map over a list of the numbers `[2000 - 2015]` and use those numbers to construct dates. We will use the same process for calculating transition stats as we outlined above.
+
+So, we will create the `ee.List` of numbers that we will map over.
+~~~
+var transitionStats = ee.List.sequence(2000, 2015)
+  .map(function(year) {
+~~~
+{:. .source .language-javascript}
+
+Using the years 2000 to 2015, we create a `fromFilter` (for the year) and a `toFilter` (for the year after).
+~~~
+    var fromFilter = ee.DateRange(ee.Date.fromYMD(year, 1, 1), ee.Date.fromYMD(year, 12, 31))
+    var toFilter = ee.DateRange(ee.Date.fromYMD(year, 1, 1).advance(1, 'year'), ee.Date.fromYMD(year, 12, 31).advance(1, 'year'))
+~~~
+{:. .souce .language-javascript}
+
+Using those filters, we filter the AtlasV2 collection into a `fromImage` and a `toImage`.
+~~~
+    var fromImage = ee.Image(atlasV2Collection.filterDate(fromFilter).first())
+    var toImage = ee.Image(atlasV2Collection.filterDate(toFilter).first())
+~~~
+{:. .source .language-javascript}
+
+Now that we have our from and to images, we can pack them together into a transition image and take its histogram.
+~~~
+    var transitionImage = fromImage.multiply(100).add(toImage)
+    var transitionHistogram = transitionImage.reduceRegion({
+        reducer: ee.Reducer.frequencyHistogram(),
+        scale: 30,
+        maxPixels: 1e13
+      })
+~~~
+{:. .source .language-javascript}
+
+Then we unpack that conversion histogram, converting each class transition into a feature.
+~~~
+    var conversionCoefficient = 0.0009
+    var transitionCollection = ee.Dictionary(transitionHistogram.get('b1'))
+      .map(function(transitionValue, pixelCount) {
+        var transitionArea = ee.Number(pixelCount).multiply(conversionCoefficient)
+        var transitionFrom = ee.Number.parse(transitionValue).divide(100).floor()
+        var transitionTo = ee.Number.parse(transitionValue).mod(100)
+        var transitionFeature = ee.Feature(null, {
+          'transitionFrom': transitionFrom,
+          'transitionTo': transitionTo,
+          'transitionAreaKm': transitionArea,
+          'fromYear': year,
+          'toYear': ee.Number(year).add(1)
+        })
+        return transitionFeature
+      })
+      .values()
+    return transitionCollection
   }).flatten()
-}
-```
+~~~
+{:. .source .language-javascript}
 
-Let's see how this does:
-```
-var trainingData = sampleCollection(landsatImages, atlasV1_2013, trainingPoints)
-var testingData = sampleCollection(landsatImages, atlasV1_2013, testingPoints)
-
-print(trainingData)
-print(testingData)
-```
-
-Great! We've got our training and testing data, and we're ready to train our classifier.
+Finally, we cast the resulting features collection. This gives us a collection of class transitions that we can display in the console or export to Drive.
+~~~
+transitionStats = ee.FeatureCollection(transitionStats)
+print('transitionStats', transitionStats)
+~~~
+{:. .source .language-javascript}
