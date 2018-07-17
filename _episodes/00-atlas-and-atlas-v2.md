@@ -30,6 +30,8 @@ _2013 Atlas Classification_
 
 The [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usgs.gov/westafrica/) is a land cover dataset produced by USGS, USAID, and CILSS. This land cover dataset was produced by experts in West Africa, who hand classified 1,200,000 pixels. The dataset is available at 2km resolution, and three maps are available: 1975, 2000, and 2013. Advantages of this dataset include its high reliability and its class system, which was chosen by researchers in the region and is suited to West Africa. Atlas classes are specific to West Africa; for example, in addition to classes like forest or settlement, there are classes like short grass savanna, bowe, steppe, etc. One disadvantage of this dataset is its coarse resolution (2km). It is also very time and labor intensive to produce; it takes a large number of researchers over a year to produce a land cover map for a year.
 
+The Atlas dataset is available for download from the USGS website. [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usgs.gov/westafrica/)
+
 ### Atlas V2 Dataset
 <img src="../fig/01-atlas-v2-2016.png" border="10" >
 _2016 Atlas V2 Classification_
