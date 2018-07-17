@@ -4,25 +4,22 @@ teaching: 0
 exercises: 0
 questions:
 - How do I sample Atlas data?
-- How do I create a testing set and a training set?
-- Are there ways to ensure an balanced split of classes?
 objectives:
-- Use `ee.Image.random` and `reduceToVectors` to create sampling points
 - Divide the data into a training set and a testing set.
 keypoints:
 - Atlas data must be sampled at the centerpoint of each 2km pixel
 - We sample the data by creating a geometry of points, and using that as the geometry for `.sampleRegion`
 ---
 
-Last episode, we talked about how to assemble the training data that we're going to use to train our classifier. Now that we have this data assembled, we need to connect it with our labels, ie, the Atlas data. The Atlas data was produced by classifying individual Landsat pixels in a 2km grid. So, when we sample our Landsat images, we want to be sampling only those landsat pixels that were used to produce the Atlas dataset. Once we have created a feature collection of Atlas centerpoints we want to sample, we will split these geometries into a training set and a testing set. We will then add the Atlas bands to the Landsat image and sample the result, thereby creating the inputs for the classifier.
+Last episode, we talked about how to assemble the training data that we're going to use to train our classifier. Now that we have this data assembled, we need to connect it with our labels, ie, the Atlas data. The Atlas data was produced by classifying individual Landsat pixels in a 2km grid. So, when we sample our Landsat images, we want to be sampling only those Landsat pixels that were used to produce the Atlas dataset. We will then add the Atlas bands to the Landsat image and sample the result, thereby creating the inputs for the classifier.
 
 ### Loading Training Image
 
-We will use the code from the previous episode in which we created a Landsat composite image as the starting point. That code is available in Earth Engine here: http://bit.ly/2NETIUG
+We will use the code from the previous episode in which we created a Landsat composite image as the starting point. That code is available in Earth Engine here: bit.ly/2mmTRzu <!--http://bit.ly/2NETIUG-->
 
 ## Getting Image Centerpoints
 
-The Atlas is, essentially, a grid of hand classified Landsat pixels at 2km resolution. To sample it, we want to create a collection of Atlas pixel centerpoints. To do that, we're going to use the same technique as we used to create the classification zones.
+The Atlas is, essentially, a grid of hand classified Landsat pixels at 2km resolution. To sample it, we want to create a collection of Atlas pixel centerpoints. To do that, we're going to use the same technique as we used to create the classification zones, but on a smaller scale.
 
 First, we need to import our label image. It's important that our sampling points have the same projection as the Atlas data; we need to make sure that we're sampling exactly the pixel that was classified in the Atlas data.
 ~~~

@@ -1,7 +1,7 @@
 ---
 title: "Compiling Training Data"
-teaching: 5
-exercises: 30
+teaching: 45
+exercises: 0
 questions:
 - How do we generate zones for classification?
 - How do we select zones in the preferred season for classification?
@@ -44,12 +44,19 @@ One of the surprising things we learned while making the Atlas V2 dataset was th
 
 To generate the training zones, we use a little trick that we'll use a few times. We're going to create an raster of random values at the scale that we want, and then we will reduce that raster to an collection of vectors.
 
-We need a geometry to use to bound our classification zones. Let's use Burkina Faso. We'll make the zones 55000m square, which is roughly 0.5 degrees.
+We need a geometry to use to bound our classification zones. Let's use just draw a point on the map. We'll make the zones 56000m square, which is roughly 0.5 degrees.
 ~~~
 var classificationArea = /* color: #d63000 */ee.Geometry.Point([-12.392578125, 12.399002919688813]);
 var zoneSize = 55000
-
 ~~~
+{:. .source .language-javascript}
+
+We will also load the Atlas image, so that we can get its projection. We want our zones to be in the same projection as the Atlas image.
+~~~
+var atlasImage = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
+var labelProjection = atlasImage.projection()
+~~~
+{:. .source .language-javascript}
 
 First we create an image of random floats, 0.0 - 1.0
 ~~~
@@ -126,12 +133,14 @@ flyBit = 0 => [0, 1, 1] => [0, 2, 1] => 3
 
 Let's create a function that can mask landsat images for clouds.
 ~~~
-function maskLandsatImage(image) {
+function maskLandsat(image) {
 ~~~
 {:. .code .language-javascript}
 
 We're going to set up the numbers that we'll use to check against the `pixel_qa` band.
 ~~~
+  var qa = image.select('pixel_qa')
+
   // Bits 0, 3, 4 and 5 are fill, cloud shadow, snow, and cloud.
   var fillBit = ee.Number(2).pow(0).int()
   var cloudShadowBit = ee.Number(2).pow(3).int()
@@ -175,10 +184,14 @@ We now want to drop any of the metadata bands from the image (`pixel_qa`, `radsa
 Let's see how well our mask does.
 
 ~~~
-var landsatImage = lsCollection.map(maskLandsat)
-  .aside(function(collection) {
-    Map.addLayer(collection.median(), {min: 0, max: 3000, bands: "B3, B2, B1"})
-  })
+var landsatImage = landsat7Collection
+  .filterBounds(classificationZone)
+  .filter(timeFilter)
+  .map(maskLandsat)
   .median()
+
+Map.addLayer(landsatImage, {min: 0, max: 3000, bands: "B3, B2, B1"})
 ~~~
 {:. .source .language-javascript}
+
+Code available at bit.ly/2uCzfHj
