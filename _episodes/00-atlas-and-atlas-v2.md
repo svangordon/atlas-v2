@@ -1,7 +1,7 @@
 ---
 title: "Intro to Atlas and Atlas V2"
 teaching: 5
-exercises: 30
+exercises: 10
 questions:
 - What are Atlas and Atlas V2?
 - What is the relationship between Atlas and Atlas V2?
@@ -28,18 +28,32 @@ We are going to be talking to you about the Atlas and Atlas V2 datasets.
 <img src="../fig/01-atlas-2013.png" border="10" >
 _2013 Atlas Classification_
 
-The [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usgs.gov/westafrica/) is a land cover dataset produced by USGS, USAID, and CILSS. This land cover dataset was produced by experts in West Africa, who hand classified 1,200,000 pixels. The dataset is available at 2km resolution, and three maps are available: 1975, 2000, and 2013. Advantages of this dataset include its high reliability and its class system, which was chosen by researchers in the region and is suited to West Africa. One disadvantage of this dataset is its coarse resolution (2km). It is also very time and labor intensive to produce; it takes a large number of researchers over a year to produce a land cover map for a year.
+The [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usgs.gov/westafrica/) is a land cover dataset produced by USGS, USAID, and CILSS. This land cover dataset was produced by experts in West Africa, who hand classified 1,200,000 pixels. The dataset is available at 2km resolution, and three maps are available: 1975, 2000, and 2013. Advantages of this dataset include its high reliability and its class system, which was chosen by researchers in the region and is suited to West Africa. Atlas classes are specific to West Africa; for example, in addition to classes like forest or settlement, there are classes like short grass savanna, bowe, steppe, etc. One disadvantage of this dataset is its coarse resolution (2km). It is also very time and labor intensive to produce; it takes a large number of researchers over a year to produce a land cover map for a year.
 
 ### Atlas V2 Dataset
 <img src="../fig/01-atlas-v2-2016.png" border="10" >
 _2016 Atlas V2 Classification_
 
-The Atlas V2 is a land cover dataset produced by Mollie Van Gordon at the University of California, Berkeley. This dataset uses the Atlas as training data to perform machine classification of satellite imagery. By using the Atlas data to train machine learning algorithms, we can produce land cover maps of the West Africa region that are of a similar accuracy as the Atlas dataset, but at a higher resolution. Furthermore, by taking advantage of the Google Earth Engine cloud computing platform and using publicly available datasets, we can create land cover maps at no cost, and annually.
+The Atlas V2 is a land cover dataset produced by Mollie Van Gordon at the University of California, Berkeley. This dataset uses the Atlas as training data to perform machine classification of satellite imagery. By using the Atlas data to train machine learning algorithms, we can produce land cover maps of the West Africa region that are of a similar accuracy as the Atlas dataset, but at a higher resolution. The dataset was produced using the Google Earth Engine cloud computing platform, which is freely available to the public. Because we used Earth Engine and publicly available datasets, we can create land cover maps at low or no cost, and annually.
 
-Currently, the V2 team has produced a 30m land cover dataset using Landsat images for every year between 2000 and 2016. This dataset is currently available on Google Earth Engine. Furthermore, the process for creating these datasets is flexible. Different datasets can be used in place of both Landsat and Atlas. For example, researchers could use Sentinel imagery to produce a map at 20m resolution, or researchers could hand classify a small area of interest to produce a land cover map at an even higher accuracy.
+Currently, the V2 team has produced a 30m land cover dataset using Landsat images for every year between 2000 and 2016. This dataset is currently available on Google Earth Engine. The process for creating these datasets is flexible. Different datasets can be used in place of both Landsat and Atlas. For example, researchers could use Sentinel imagery to produce a map at 20m resolution, or researchers could hand classify a small area of interest to produce a land cover map at an even higher accuracy.
 
 Currently, not all of the region covered by Atlas is classified in Atlas V2. The southern coast of West Africa has been excluded, due to issues with finding cloud-free images. Southern Chad has also not been classified, due to issues with scale (in Atlas, Chad is at 4km resolution). Both of these omissions are due to time constraints: there's no reason that we couldn't classify the entire region, and in fact we're eager to. We just haven't had time yet!
 
+## Viewing Datasets
+We will talk more soon about how to view these datasets. For now, let's just look at them in Earth Engine.
+
+The following link will display the Atlas and AtlasV2 data for 2013.
+http://bit.ly/2mqrMHr
+
+Let's take ten minutes to look around the data. Record some of your observations about the classification -- its accuracy, any artifacts, what it does well, or what it does not do well.
+
+> ## Discussion
+>
+> * What are the differences between the Atlas and the AtlasV2 datasets?
+> * What are some areas where the Atlas or AtlasV2 is doing well? Where does it not do so well?
+> * In what ways might the AtlasV2 dataset be useful for your work?
+<!--
 ## Loading Atlas Images
 
 We will first discuss how to load the Atlas dataset and display it in Earth Engine. The Atlas V2 team has loaded the Atlas dataset into Earth Engine. However, we will show you the process that would be used to upload this dataset. It is the same process that you would use to load a custom raster dataset.
@@ -279,4 +293,4 @@ atlasV2Years.map(function(year) {
 This lesson, we've discussed some background about the Atlas and Atlas V2 datasets. We have demonstrated how to display both the Atlas and Atlas V2 datasets.
 
 ## Questions
-???
+??? -->

@@ -3,7 +3,7 @@ var displayAtlasClassification = workshopTools.displayAtlasClassification
 
 var landsat7Collection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
 
-var classificationPoint = /* color: #d63000 */ee.Geometry.Point([-12.392578125, 12.399002919688813]);
+var classificationPoint = ee.Geometry.Point([-12.392578125, 12.399002919688813]);
 var zoneSize = 56000
 // var labelProjection = atlasImage.projection()
 // var atlasImage = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
@@ -47,8 +47,6 @@ function toPoint(feature) {
 }
 
 var classificationZone = getClassificationZone(classificationPoint, zoneSize)
-
-displayAtlasClassification(atlasImage.clip(classificationZone))
 
 function getLateYearFilter(year) {
   return ee.Filter.or(
@@ -137,7 +135,7 @@ function assessClassification(trainingImage, samplingPoints, trainingBands, titl
   Including neighboring zones
 */
 
-var neighborZonePoint = /* color: #d63000 */ee.Geometry.Point([-12.444763162638992, 12.427175804835738]);
+var neighborZonePoint = ee.Geometry.Point([-12.444763162638992, 12.427175804835738]);
 
 var neighborZone = getClassificationZone(neighborZonePoint, zoneSize)
 

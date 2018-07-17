@@ -1,19 +1,14 @@
 ---
-title: "Improving Data Inputs"
+title: "Classifying at Scale"
 teaching: 0
 exercises: 0
 questions:
-- How do I create a time series for a given location?
-- How can I plot that time series within Google Earth Engine?
-- "How do I make that plot interactive?"
+- How do we perform classifications for large numbers of images?
 objectives:
-- "Load high resolution crop imagery."
-- "Dynamically select lat/longs for creating time series plots."
-- "Create a time series of NDVI and EVI for a selected point."
+- Create a pipeline for classifying images.
+- Automatically begin classifications as batch jobs.
 keypoints:
-- "Time series data can be extracted and plotted from Image Collections for points and regions."
-- "GEE has increasing functionality for making interactive plots."
-- "The User Interface can be modified through the addition of widget."
+- Batch jobs can be executed automatically using by using the browser console.
 
 ---
 
@@ -194,11 +189,101 @@ Map.addLayer(getImage(classificationZones.first(), 2013), {bands: "B3, B2, B1", 
 ~~~
 
 ## Create a classify and export function
-Now, we will create a function that will map over all of our images and classify them.
+Now, we will create a function that will map over all of our year-zone pairs and classify them.
 
+We begin our function, and cast the  `yearZonepair` to a feature.
+~~~
+function classifyImage(yearZonePair) {
+  yearZonePair = ee.Feature(yearZonePair)
+~~~
+{:. .source .language-javascript}
 
+We keep track of the `yearZonePair`'s index so that we can later on calculate the zone id and year. `system:index` is just an element's position in a collection.
+~~~
+  var classificationIndex = yearZonePair.get('system:index')
+~~~
+{:. .source .language-javascript}
 
-#### Classify
+And then we read the year and the geometry off of the yearZonePair.
+~~~
+  var classificationYears = ee.List(yearZonePair.get('years'))
+  var classificationAoi = yearZonePair.geometry()
+~~~
+{:. .source .language-javascript}
 
-#### Export
-We will begin by exporting our images as Earth Engine assets.
+We now begin to train our classifier. We are going to use 2013 as the year for our training.
+~~~
+  var trainingYear = 2013
+  var labelImage = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
+~~~
+{:. .source .language-javascript}
+
+We create our training image using the `getImage` function that we defined earlier.
+~~~
+  var trainingImage = getImage(classificationAoi, trainingYear).addBands(labelImage)
+~~~
+{:. .source .language-javascript}
+
+We create the sampling points for our zone.
+~~~
+  var zonePoints = getPoints(classificationAoi)
+~~~
+{:. .source .language-javascript}
+
+We sample our training image.
+~~~
+  var zoneData = trainingImage
+    .addBands(ee.Image.pixelLonLat())
+    .sampleRegions({
+      collection: zonePoints,
+      scale: 30,
+      projection: zonePoints.geometry().projection()
+    })
+    .map(toPoint)
+    .randomColumn('trainTestSplit', 0)
+~~~
+{:. .source .language-javascript}
+
+We split our data into training and testing sets.
+~~~
+  var trainingSize = 0.7
+  var trainingData = zoneData.filter(ee.Filter.lt('trainTestSplit', trainingSize))
+  var testingData = zoneData.filter(ee.Filter.gte('trainTestSplit', trainingSize))
+~~~
+{:. .source .language-javascript}
+
+We train our classifier and assess its accuracy.
+~~~
+  var classifier = ee.Classifier.randomForest(10).train(trainingData, 'b1', landsatBands)
+  var testingAccuracy = testingData.classify(classifier).errorMatrix('b1', 'classification').accuracy()
+~~~
+{:. .source .language-javascript}
+
+Now, we are going to map over our list of years, and for each year, we will create an image that we will classify with the classifier. We will also set the testing accuracy of the classifier as a property on the image.
+~~~
+  var classifiedImages = classificationYears.map(function(classificationYear) {
+    // Get collection of images that we are going to classify
+    var classificationImage = getImage(classificationAoi, classificationYear)
+
+    var classifiedImage = classificationImage.classify(classifier)
+      .set('testingAccuracy', testingAccuracy)
+    return classifiedImage
+  })
+~~~
+{:. .source .language-javascript}
+
+Now we return that collection of classified images.
+~~~
+  return classifiedImages
+}
+~~~
+{:. .source .language-javascript}
+
+Now we use that `classifyImage` function to map over the collection of year-zone pairs.
+~~~
+var classifiedImages = yearZonePairs.map(classifyImage).flatten()
+~~~
+{:. .source .language-javascript}
+
+## Exporting Classified Images
+We now want to export all of these classified images as batch jobs. One problem is that when 

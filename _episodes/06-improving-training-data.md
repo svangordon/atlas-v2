@@ -3,18 +3,14 @@ title: "Improving Data Inputs"
 teaching: 0
 exercises: 0
 questions:
-- How do I create a time series for a given location?
-- How can I plot that time series within Google Earth Engine?
-- "How do I make that plot interactive?"
+- How can we improve our data inputs?
 objectives:
-- "Load high resolution crop imagery."
-- "Dynamically select lat/longs for creating time series plots."
-- "Create a time series of NDVI and EVI for a selected point."
+- Add additional datasets to our training data
+- Sample training data from multiple seasons
 keypoints:
-- "Time series data can be extracted and plotted from Image Collections for points and regions."
-- "GEE has increasing functionality for making interactive plots."
-- "The User Interface can be modified through the addition of widget."
-
+- Classification accuracy can be improved by adding different kinds of data, such as DEM data or precipitation data.
+- Classification accuracy can improved by sampling from multiple parts of the year.
+- Caution should be taken when adding new data. Data should not be too noisey or irrelevant to the question at hand. It should also not be highly correlated with existing features.
 ---
 
 ## Overview

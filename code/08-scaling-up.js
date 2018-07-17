@@ -146,23 +146,12 @@ function classifyImage(yearZonePair) {
   var classificationYears = ee.List(yearZonePair.get('years'))
   var classificationAoi = yearZonePair.geometry()
 
-  // var classificationImage = getImage(classificationAoi, classificationYear)
-  // Map.addLayer(ee.Image(classificationImages.first()), {min: 0, max: 3000, bands: "B3,B2,B1"}, 'classificationImage')
-
-
   // Train classifier
   var trainingYear = 2013
-  var trainingCollection = ee.ImageCollection('users/svangordon/conference/atlas/atlasCollection')
+  var labelImage = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
 
-  var labelImage = trainingCollection.filterDate(ee.Date.fromYMD(trainingYear, 01, 01)).mosaic()
   var trainingImage = getImage(classificationAoi, trainingYear).addBands(labelImage)
-  // labelImage = ee.Image(labelImage.first())
-  // Map.addLayer(labelImage)
-  // Map.addLayer(trainingImage, {min: 0, max: 3000, bands: "B3,B2,B1"}, 'trainingImage')
-  // print(labelImage)
-
   var zonePoints = getPoints(classificationAoi)
-  // Map.addLayer(zonePoints)
 
   var zoneData = trainingImage
     .addBands(ee.Image.pixelLonLat())
@@ -189,39 +178,21 @@ function classifyImage(yearZonePair) {
     var classifiedImage = classificationImage.classify(classifier)
       .set('testingAccuracy', testingAccuracy)
 
-    var imageTitleString = ee.String('classification ').cat(ee.Algorithms.String(classificationIndex))
-      .cat(' ')
-      .cat(ee.Algorithms.String(classificationYear))
-
-    // // Export classified Image
-    // Export.image.toDrive({
-    //   image: classifiedImage,
-    //   folder: 'classifiedLulc',
-    //   region: classificationAoi,
-    //   // fileNamePrefix: imageTitleString,
-    //   scale: 30,
-    //   // description: imageTitleString,
-    //   maxPixels: 1e13
-    // });
     return classifiedImage
   })
   return classifiedImages
 }
-// print(yearZonePairs.map(classifyImage))
-var clfdImages = classifyImage(yearZonePairs.first())
-print(clfdImages.size())
+// // print(yearZonePairs.map(classifyImage))
+// var clfdImages = classifyImage(yearZonePairs.first())
+// print(clfdImages.size())
+
+var classifiedImages = yearZonePairs.map(classifyImage).flatten()
 
 var workshopTools = require('users/svangordon/lulc-conference:workshopTools')
 var displayAtlasClassification = workshopTools.displayAtlasClassification
 displayAtlasClassification(clfdImages.get(0), 'clfd first')
 
-
-// var numberOfZones = yearZonePairs.size().getInfo()
-// for (var imageIndex = 0; imageIndex < numberOfZones * classificationYears.length; imageIndex++) {
-//   print(image)
-// }
-
-clfdImages.size().evaluate(function(clfdImagesSize) {
+classifiedImages.size().evaluate(function(clfdImagesSize) {
   print('starting eval fn')
   var numberOfZones = yearZonePairs.size().getInfo()
   var numberOfYears = classificationYears.length
