@@ -21,6 +21,12 @@ Up to this point, we've discussed how to use and interact with the Atlas and Atl
 
 In this section, we will discuss assembling the satellite imagery that will be used to train our classifier.
 
+Outline of Process:
+* Create centerpoints of Atlas images
+* Create Landsat collection, filtered spatially and temporally
+* Sample Landsat collection at centerpoints
+<!-- Discussion for about 15 minutes -->
+
 ## Loading a Landsat Collection
 For Atlas V2, we used the Landsat 7 Surface Reflectance dataset. The images in this dataset are corrected for atmospheric conditions, so the values should more closely reflect conditions on the surface rather than the top of atmosphere. You can [read more about Landsat 7 SR here](https://explorer.earthengine.google.com/#detail/LANDSAT%2FLE07%2FC01%2FT1_SR).
 
@@ -58,11 +64,11 @@ We then convert our floats to integers 0-10000000. No two neighboring pixels sho
 ~~~
 {:. .source .language-javascript}
 
-We now reduce our seed image to a feature collection, using the scale to set the size of the zones. We need to buffer our `classificationArea` to make sure we capture all zones on the border.
+We now reduce our seed image to a feature collection, using the scale to set the size of the zones.
 ~~~
   .reduceToVectors({
-      scale: 55000,
-      geometry: classificationArea.geometry().buffer(zoneSize / 2)
+      scale: zoneSize,
+      geometry: classificationArea.geometry()
     })
 ~~~
 {: .code .language-javascript}
@@ -73,22 +79,22 @@ When we're assembling Landsat images for a given year, we don't take every singl
 
 In order to have enough scenes for a good sample, we select imagery from the year before and the year after the year of interest. For example, if we were creating an image for 2012, we would have imagery for September - November in 2011, 2012, and 2013.
 
-Let's create a function that creates a filter for us. We're going to create a function that takes a (eg, `2012`) and returns a filter that selects images from September 15 to November 15 for that year and the years before and after.
+<!-- Let's create a function that creates a filter for us. We're going to create a function that takes a (eg, `2012`) and returns a filter that selects images from September 15 to November 15 for that year and the years before and after. -->
 
 ~~~
 function getLateYearFilter(year) {
 ~~~
 {:. .code .language-javascript}
 
-To create our filters, we're going to take advantage of string concatenation in JavaScript. When you add a string and a number in JavaScript, the result is a concatenation of the two objects. Ex., `5 + 'apples' == '5apples'`. Similarly, `2000 + '-01-01' == '2000-01-01'`.
+To create our filters, we're going to combine filter for 2012 to 2014 using `.or`
 ~~~
-  return ee.Filter.or(
-    ee.Filter.date( year - 1 + '09-15',  year - 1 + '11-15'),
-    ee.Filter.date( year     + '09-15',  year     + '11-15'),
-    ee.Filter.date( year + 1 + '09-15',  year + 1 + '11-15')
+// Create a time filter for 2013
+var timeFilter = ee.Filter.or(
+    ee.Filter.date('2012-09-15', '2012-11-15'),
+    ee.Filter.date('2013-09-15', '2013-11-15'),
+    ee.Filter.date('2014-09-15', '2014-11-15')
   )
-}
-print(getLateYearFilter(2013))
+print(timeFilter)
 ~~~
 {:. .code .language-javascript}
 

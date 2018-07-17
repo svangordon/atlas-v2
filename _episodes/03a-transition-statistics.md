@@ -1,14 +1,14 @@
 ---
 title: "Transition Statistics"
-teaching: 0
+teaching: 30
 exercises: 0
 questions:
 - How can I see information about transitions between classes?
 objectives:
 - Create a transition matrix (or a set of transition stats)
 keypoints:
-- Transition matrices can be created using an `.errorMatrix`
-- Transition matrices can also be created by 'packing' values
+- Transition matrices can be created by 'packing' values
+- When we create at collection of transition matrices, we map over a sequence of years, and use date filters to select our to and from images.
 ---
 
 Last episode, we talked about how we can get information about areas of different classes in the AtlasV2 dataset. This episode, we will discuss more advanced statistics: specifically, we are going to look at extracting more complex information from the images, specifically information about transitions between classes.
@@ -16,8 +16,8 @@ Last episode, we talked about how we can get information about areas of differen
 ## Transition Matrices
 Because of the high temporal resolution of AtlasV2, we are able to get more meaningful information about the transitions between classes. Using AtlasV2, we can see not only that certain classes are growing or shrinking in area, but we can also see which classes are transitioning into other classes. For example, we can see that Short-grass Savanna is the class most commonly converted into agriculture.
 
-## A more Academic Description of Transition Matrices
-Transition matrices are also known as stochastic matrices. Stochastic matrices are used to describe the transitions of a Markov chain. That's basically treating the land cover system sort of like a state machine, which is actually pretty cool.
+<!-- ## A More Academic Description of Transition Matrices
+Transition matrices are also known as stochastic matrices. Stochastic matrices are used to describe the transitions of a Markov chain. That's basically treating the land cover system sort of like a state machine, which is actually pretty cool. -->
 
 ## Process Overview
 To create our transition matrix, we are going to associate the image from each year in the AtlasV2 collection with the image from the year after. So we will combine the image from 2000 with the image from 2001, the image from 2001 from the image with 2002, and so forth.
@@ -254,3 +254,5 @@ transitionStats = ee.FeatureCollection(transitionStats)
 print('transitionStats', transitionStats)
 ~~~
 {:. .source .language-javascript}
+
+Code available at: bit.ly/2utplZk

@@ -1,7 +1,7 @@
 ---
 title: "Basic Image Statistics"
-teaching: 5
-exercises: 0
+teaching: 35
+exercises: 10
 questions:
 - "How do we determine how much of a certain class is in an image?"
 - "How can we get statistics for different countries and geometries?"
@@ -23,7 +23,7 @@ In our last exercise, we rendered the Atlas and AtlasV2 images to the Earth Engi
 
 We'll start by performing some statistical analysis on the datasets, including class areas and class histograms. We'll look at getting statistics for custom geometries as well as at the national level. Then, we will look at ways that we can display charts expressing information about those datasets in Earth Engine.
 
-## Setup
+<!-- ## Setup
 
 Let's import some of the tools that we created last episode and saved in our workshop tools, and import some of the Atlas datasets.
 ~~~
@@ -33,7 +33,7 @@ var atlasV2_2013 = ee.Image('users/svangordon/conference/atlas_v2/classify/2013'
 var atlasV2Collection = workshopTools.atlasV2Collection
 
 ~~~
-{:. .source .language-javascript}
+{:. .source .language-javascript} -->
 
 ## Spatial Reductions
 
@@ -83,14 +83,14 @@ We didn't pass a geometry, so the reduction happens over the entire area of the 
 >    Image.reduceRegion: Too many pixels in the region. Found 4388085118, but only 10000000 allowed.
 > ~~~
 > {:. .error}
-> When reducing more than 10000000 pixels, we must 'ask permission' by passing a maxPixel value greater than the number of pixels in the image. Google wants to make sure that you are not accidentally requesting
+> When reducing more than 10000000 pixels, we must 'ask permission' by passing a maxPixel value greater than the number of pixels in the image. Google wants to make sure that you are not accidentally requesting many more pixels than you intended.
 {:. .callout}
 
 In the output, you can see that we're returning an object with one property, `b1`. That is the class band for the image; if the image had more than one band, those bands would be present as well.
 
 Let's take only the `b1` property of our reduction output, and cast it to a dictionary.
 ~~~
-var pixelCounts = ee.Dictionary(statsAtlasV2_2013.get('b1'))
+var pixelCounts = ee.Dictionary(imageReduction.get('b1'))
 ~~~
 {:. .source .language-javascript}
 > ## Casting
@@ -99,7 +99,7 @@ var pixelCounts = ee.Dictionary(statsAtlasV2_2013.get('b1'))
 {:. .callout}
 
 ### Converting Counts to Areas
-The `.frequencyHistogram()` reducer gives a count of pixels, not a total area. To convert pixel counts to area, we can multiply the pixel counts by an appropriate conversion coefficient: `4` for Atlas (`1 pixel == 4km^2`); `0.0009` for Atlas V2 (`1 pixel == 0.0009km^2`). We will multiply our vales by 0.0009, in this example.
+The `.frequencyHistogram()` reducer gives a count of pixels, not a total area. To convert pixel counts to area, we can multiply the pixel counts by an appropriate conversion coefficient: `0.0009` for Atlas V2 (`1 pixel == 0.0009km^2`). We will multiply our vales by 0.0009, in this example.
 
 ~~~
 var conversionCoefficient = 0.0009
@@ -146,6 +146,12 @@ Object (23 properties)
 ~~~
 {:. .output}
 
+<!-- Spend two or three minutes on this -->
+> ## Challenge
+>
+> In the Atlas dataset, each pixel is 2000m square. If we were getting statistics for the Atlas dataset, what would we use as our conversion coefficient?
+{:. .challenge}
+
 ## Getting Statistics for Regions
 
 The method that we have laid out produces statistics for an entire image. However, it is also possible for us to get statistics for a defined region, such as a country or a custom geometry. When we make our `.reduceRegion` call, we will also provide a geometry to perform the reduction over.
@@ -172,7 +178,7 @@ print('regional areas', regionalAreas)
 {:. .source .language-javascript}
 
 #### Country Geometries
-We can also perform regions over predefined geometries, like country boundaries. One collection of country boundaries that is available in Earth Engine is the US DoS's Large-Scale International Boundary collection. We can import it as a feature collection:
+We can also perform reductions over predefined geometries, like country boundaries. One collection of country boundaries that is available in Earth Engine is the US DoS's Large-Scale International Boundary collection. We can import it as a feature collection:
 ~~~
 var countryBoundaries = ee.FeatureCollection('USDOS/LSIB/2013')
 ~~~
@@ -209,45 +215,9 @@ print('country areas', regionalAreas)
 ~~~
 {:. .source .language-javascript}
 
-## Exporting an Image
-
-You might like to export a region of a classified image so that you can use it outside of Earth Engine. We can do this by exporting the image to Google Drive.
-
-~~~
-// Export a classified Image
-
-Export.image.toDrive({
-  image: atlasV2_2013,
-  folder: 'classifiedLulc',
-  region: countryGeometry,
-  fileNamePrefix: 'atlasV2_2013',
-  scale: 30,
-  description: 'atlasV2_2013',
-  maxPixels: 1e13
-});
-~~~
-{:. .source .language-javascript}
-
-This outputs the image as a `.tiff` file. That's an ideal choice if you are planning to work with the image in another kind of GIS software, such as QGis. But, if you would prefer to display the image in a way that's easier to display -- for example, if you want an image for a presentation, or to put on a website, you will want to conver the image to RGB format. Use the `.visualize` method, and pass the visualization parameters you would usually use to display the image on the map. Earth Engine will convert the image to a three band RGB image.
-
-~~~
-// Export a classified Image
-
-Export.image.toDrive({
-  image: atlasV2_2013.visualize(atlasVisParams),
-  folder: 'classifiedLulc',
-  region: classificationZone,
-  fileNamePrefix: 'atlasV2_2013',
-  scale: 30,
-  description: 'atlasV2_2013',
-  maxPixels: 1e13
-});
-~~~
-{:. .source .language-javascript}
-
 ## Display Area as Bar Chart
 
-Let's display the class counts as a bar chart, using the `ui.Chart.feature` methods. `ui.Chart.feature` displays a `ee.FeatureCollection`, so we will convert our dictionaries of areas into features and turn those features into a feature collection.
+Let's display the class counts as a bar chart, using the `ui.Chart.feature` methods. `ui.Chart.feature` displays a `ee.FeatureCollection`, so we will convert our dictionary of areas into features and turn those features into a feature collection.
 > ## Null-geometry Features
 >
 > The first parameter we pass to feature is the geometry. In this case, the feature does not have a geometry, so we pass `null` instead.
@@ -256,6 +226,8 @@ Let's display the class counts as a bar chart, using the `ui.Chart.feature` meth
 ~~~
 var chartInput = ee.Feature(null, classAreas)
 chartInput = ee.FeatureCollection(chartInput)
+var areaChart = ui.Chart.feature.byProperty(ee.FeatureCollection(chartInput))
+print(areaChart)
 ~~~
 {:. .source .language-javascript}
 
@@ -267,32 +239,6 @@ var nameDictionaryFrench = atlasClassMetadata.nameDictionaryFrench
 print('nameDictionaryFrench', nameDictionaryFrench)
 ~~~
 {:. .source .language-javascript}
-
-For our chart labels, we need to make sure that only classes present in our chart input are in the chart labels, or else Earth Engine will give an error. So, we will select from the name dictionary those properties present on `chartInput`
-~~~
-var chartLabels = nameDictionaryFrench.select(chartInput.propertyNames())
-~~~
-{:. .source .language-javascript}
-
-`ui.Chart` is a local or client-side method, meaning that its inputs must be JavaScript objects, not Earth Engine objects. We'll use `.getInfo()` to convert the chart labels to a JavaScript object.
-
-~~~
-var chartLabels = nameDictionaryFrench.select(chartInput.propertyNames()).getInfo()
-~~~
-{:. .source .language-javascript}
-
-> ## `.getInfo()`
->
-> The `.getInfo()` method converts an Earth Engine object on the Google server into a local JavaScript object. It is similar to the `print()` function: both make a request to the Earth Engine servers, and return a value. But while the `print()` function gets a value and displays it in the console, `.getInfo()` makes it available in the code. Furthermore, `.getInfo` halts the execution of our script while waiting for the Earth Engine servers to return a value. Because it pauses the running of your script, use `.getInfo()` sparingly. We mostly only need it when we need to provide a local function, such as `Map.addLayer` or `ui.Chart`, with a value that we need to calculate from Earth Engine objects.
-{:. .callout}
-
-> ## Why does it take so long?
->
-> The first time that you run this script, it will probably take a very long time to run, and your browser window will be unresponsive. Why is that?
->
-> `.getInfo()` halts all code execution until a value is returned from the Earth Engine servers. If it takes a long time for the Earth Engine servers to calculate what value should be returned from the `.getInfo` call, then your browser will be frozen for a long time.
->
-> After the `.getInfo` call completes the first time, running the script over again will not take very long at all. Why is that? Earth Engine uses **caching**. Remember, what you are sending to the Earth Engine servers is actually a set of instructions. Earth Engine holds on to the results from a given set of instructions for about 24 hours. If it encounters _exactly_ the same set of instructions during that period, it will immediately return the result for that set of instructions instead of recalculating those instructions.
 
 We would like our scale to be logarithmic, so we will set that option for the vertical axis.
 ~~~
@@ -393,6 +339,9 @@ print(areaChart)
 > {:. .solution}
 {:. .challenge
 }
+
+<!-- 20 minutes, at least -->
+
 ## Time series data
 
 Now that we have statistics for a single year, let's get statistics for the entire Atlas V2 collection. We will map over the `atlasV2Collection`, converting each image into a feature. We can then export that collection, or use it to plot time series charts.
@@ -544,3 +493,39 @@ Export.table.toDrive({
 {:. .source .language-javascript}
 
 We can then execute the task in the **Tasks** tab of the code editor. Once the export is completed, you can view it in Google Drive.
+
+> ## Discussion
+>
+> What kinds of statistics about the AtlasV2 dataset would be useful for you in your work? What would be the most useful way for you to display that data? Is it in Earth Engine, or in another program? What is the most useful format for exporting data?
+{:. .challenge}
+
+Code up to this point is available at: bit.ly/2NofUS7
+
+### Optional: Chart labels
+For our chart labels, we need to make sure that only classes present in our chart input are in the chart labels, or else Earth Engine will give an error. So, we will select from the name dictionary those properties present on `chartInput`
+~~~
+var atlasClassMetadata = require('users/svangordon/lulc-conference:atlasClassMetadata')
+var nameDictionaryFrench = atlasClassMetadata.nameDictionaryFrench
+var chartLabels = nameDictionaryFrench.select(chartInput.propertyNames())
+~~~
+{:. .source .language-javascript}
+
+`ui.Chart` is a local or client-side method, meaning that its inputs must be JavaScript objects, not Earth Engine objects. We'll use `.getInfo()` to convert the chart labels to a JavaScript object.
+
+~~~
+var chartLabels = nameDictionaryFrench.select(chartInput.propertyNames()).getInfo()
+~~~
+{:. .source .language-javascript}
+
+> ## `.getInfo()`
+>
+> The `.getInfo()` method converts an Earth Engine object on the Google server into a local JavaScript object. It is similar to the `print()` function: both make a request to the Earth Engine servers, and return a value. But while the `print()` function gets a value and displays it in the console, `.getInfo()` makes it available in the code. Furthermore, `.getInfo` halts the execution of our script while waiting for the Earth Engine servers to return a value. Because it pauses the running of your script, use `.getInfo()` sparingly. We mostly only need it when we need to provide a local function, such as `Map.addLayer` or `ui.Chart`, with a value that we need to calculate from Earth Engine objects.
+{:. .callout}
+
+> ## Why does it take so long?
+>
+> The first time that you run this script, it will probably take a very long time to run, and your browser window will be unresponsive. Why is that?
+>
+> `.getInfo()` halts all code execution until a value is returned from the Earth Engine servers. If it takes a long time for the Earth Engine servers to calculate what value should be returned from the `.getInfo` call, then your browser will be frozen for a long time.
+>
+> After the `.getInfo` call completes the first time, running the script over again will not take very long at all. Why is that? Earth Engine uses **caching**. Remember, what you are sending to the Earth Engine servers is actually a set of instructions. Earth Engine holds on to the results from a given set of instructions for about 24 hours. If it encounters _exactly_ the same set of instructions during that period, it will immediately return the result for that set of instructions instead of recalculating those instructions.

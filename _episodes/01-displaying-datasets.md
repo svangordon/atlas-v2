@@ -262,4 +262,40 @@ displayClassification(atlas_2000, 'Atlas 2000')
 {:. .source .language-javascript}
 <!-- 20 minutes -->
 
+## Exporting an Image
+
+You might like to export a region of a classified image so that you can use it outside of Earth Engine. We can do this by exporting the image to Google Drive.
+
+~~~
+// Export a classified Image
+
+Export.image.toDrive({
+  image: atlasV2_2013,
+  folder: 'classifiedLulc',
+  region: countryGeometry,
+  fileNamePrefix: 'atlasV2_2013',
+  scale: 30,
+  description: 'atlasV2_2013',
+  maxPixels: 1e13
+});
+~~~
+{:. .source .language-javascript}
+
+This outputs the image as a `.tiff` file. That's an ideal choice if you are planning to work with the image in another kind of GIS software, such as QGis. But, if you would prefer to display the image in a way that's easier to display -- for example, if you want an image for a presentation, or to put on a website, you will want to convert the image to RGB format. Use the `.visualize` method, and pass the visualization parameters you would usually use to display the image on the map. Earth Engine will convert the image to a three band RGB image.
+
+~~~
+// Export a classified Image
+
+Export.image.toDrive({
+  image: atlasV2_2013.visualize(atlasVisParams),
+  folder: 'classifiedLulc',
+  region: classificationZone,
+  fileNamePrefix: 'atlasV2_2013',
+  scale: 30,
+  description: 'atlasV2_2013',
+  maxPixels: 1e13
+});
+~~~
+{:. .source .language-javascript}
+
 Code from this episode is available at: bit.ly/2mkljNk
