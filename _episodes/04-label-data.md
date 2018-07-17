@@ -73,9 +73,7 @@ var landsatData = landsatImage.sampleRegions({
 ## Adding Label Data
 To include our Atlas label data, we add that image to the landsat image with:
 ~~~
-...
   .addBands(atlasImage)
-...
 ~~~
 {:. .source .language-javascript}
 
@@ -93,10 +91,6 @@ MultiPoint, 0 vertices
   geodesic: false
 ~~~
 {:. .output .language-javascript}
-
-~~~
-~~~
-{:. }
 
 This means we don't know where each datapoint came from! Let's fix this.
 
@@ -140,7 +134,7 @@ We now would like to get the centerpoint of each pixel in our Atlas image.The pr
 * Create an image of random numbers at the same scale and projection as the Atlas image.
 * Convert that raster image into a collection of vectors, so that each pixel is converted to a 2km square.
 * Convert each of those vectors to its centerpoint
-```
+~~~
 function getCenterPoints(geometry, image) {
   // Get the images projection and scale.
   var crs = ee.Image(image).projection()
@@ -165,60 +159,25 @@ function getCenterPoints(geometry, image) {
     })
   return centerpoints
 }
-```
+~~~
 
 Let's see how this looks:
 
-```
+~~~
 var samplingPoints = getCenterPoints(aoi, atlas_2013)
 print(samplingPoints)
 Map.addLayer(samplingPoints)
-```
+~~
+{:. .source .language-javascript}
 
 <img src="../fig/04-atlas-with-centerpoints.png" border = "10">
 
-Great! We now have a collection of points we can use to sample our collection of images. First, however, we will need to split these points into a training set and a validation set.
-
-## Training and Validation Split
-
-Before we sample our images, we want to divide our sampling points into a collection of training points (used to training the classifier) and a collection of validation points (used to assess the classifiers accuracy). It is important to assess the classifiers accuracy by testing it on datapoints it has never seen before, so that we can understand how well the classifier can be expected to perform on new images. Furthermore, we are going to split the sampling points into training and validation sets _before_ we sample, rather than sampling the images and _then_ splitting into training and validation sets, because we are sampling a collection of images, rather than a single composited image. We want to make sure that the points that we are using to assess the classifier's accuracy are points that it has never seen before.
-
-The process of splitting a feature collection is fairly straight forward:
-* Add a column containing a random number to the feature collection using `.random()`
-* Use that column to split the dataset.
-
-```
-function trainTestSplit(collection, trainingSize) {
-
-  // Add a column with a random value between 0.0 and 1.0 to each feature.
-  // Provide a seed number (0) so that the results are consistent across runs.
-  var withRandom = collection.randomColumn('random', 0);
-
-  // Any features with a random value below our training size value go in training;
-  // the rest go in testing.
-  var trainingPartition = withRandom.filter(ee.Filter.lt('random', trainingSize));
-  var testingPartition = withRandom.filter(ee.Filter.gte('random', trainingSize));
-  return [trainingPartition, testingPartition]
-}
-```
-
-Let's split the sampling points, and take a look at them on the map. Training points are in blue, testing points are in red.
-
-```
-var partitions = trainTestSplit(samplingPoints, 0.7)
-var trainingPoints = partitions[0]
-var testingPoints = partitions[1]
-Map.addLayer(trainingPoints, {palette: ['blue']}, 'trainingPoints')
-Map.addLayer(testingPoints, {palette: ['red']}, 'testingPoints')
-```
-<img src="../fig/04-training-testing-split.png" border = "10">
-
-Excellent! Now, let's sample the images that we put together before.
+Great! We now have a collection of points we can use to sample our collection of images. Let's sample the images that we put together before.
 
 ## Sampling images
 
 We would now like to sample our images. For this we need:
-* An image or image collection of feature images (we want the flexibility to sample collections, if we want)
+* A Landsat image
 * A label image (eg, the Atlas 2013 image)
 * A geometry to sample (eg, a collection of sampling points)
 
@@ -226,7 +185,7 @@ To do this sampling, we're going to map over every feature image, add the label 
 
 By default, when we sample an image, the resulting features do not have geometries. We would like to hold on to the feature geometries, so that we can know what features came from where. To do this, we will add longitude and latitude bands to our image using `ee.Image.pixelLonLat()`, and then use that information to create geometries for our features.
 
-```
+~~~
 function toPoints(fc) {
   return ee.FeatureCollection(fc).map(function(f) {
     f = ee.Feature(f)
@@ -256,15 +215,15 @@ function sampleCollection(featureImages, labelImage, samplingGeometry) {
     return toPoints(datapoints)
   }).flatten()
 }
-```
+~~~
+{:. .source .language-javascript}
 
 Let's see how this does:
-```
-var trainingData = sampleCollection(landsatImages, atlasV1_2013, trainingPoints)
-var testingData = sampleCollection(landsatImages, atlasV1_2013, testingPoints)
+~~~
+var landsatData = sampleCollection(landsatImages, atlasV1_2013, samplingPoints)
 
-print(trainingData)
-print(testingData)
-```
+print(landsatData)
+~~~
+{:. .source .language-javascript}
 
-Great! We've got our training and testing data, and we're ready to train our classifier.
+Great! We've got our data, and we're ready to train our classifier.
