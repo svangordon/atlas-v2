@@ -1,0 +1,22 @@
+Planned order:
+
+* 00-atlas-and-atlas-v2
+* 01-displaying-datasets
+* 02-atlas-statistics
+* 03-transition-statistics
+* 96-classification-overview
+    * How the process works
+
+* 03-training-data
+    * Assembling the Landsat data
+* 04-label-data
+    * How we create the sampling collection
+* 05-classify-imagery
+    * This has the summary of how supervised classification works. We should move that to the classification overview section.
+    * Talks about training a classifier, assessing its accuracy, and then using it to classify an image.
+* 06-improving-training-data
+    * Talks about adding different datasets, resampling, etc
+* 07-neighboring-zones
+    * This needs to be cleaned up
+* 08-scaling-up
+    * This has its just hanging out
