@@ -1,20 +1,17 @@
 ---
-title: "Improving Data Inputs"
+title: "Smoothing Zone Boundaries"
 teaching: 0
 exercises: 0
 questions:
-- How do I create a time series for a given location?
-- How can I plot that time series within Google Earth Engine?
-- "How do I make that plot interactive?"
+- How can I reduce the differences between zones?
+- How can I ensure that all classes are represented in the training set?
 objectives:
-- "Load high resolution crop imagery."
-- "Dynamically select lat/longs for creating time series plots."
-- "Create a time series of NDVI and EVI for a selected point."
+- Create a training dataset that is a mix of a zone and that zone's neighbors.
+- Create a training dataset that equally represents all classes within a radius of a zone.
 keypoints:
-- "Time series data can be extracted and plotted from Image Collections for points and regions."
-- "GEE has increasing functionality for making interactive plots."
-- "The User Interface can be modified through the addition of widget."
-
+- Adding training points from neighboring zones smooths the boundaries between zones.
+- Oversampling minority classes will help ensure that they are represented in the classification.
+- It is always important to keep the training and testing sets separate.
 ---
 
 ## Including Neighboring Zones

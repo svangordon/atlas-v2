@@ -1,6 +1,6 @@
 ---
 title: "Sampling Data"
-teaching: 0
+teaching: 20
 exercises: 0
 questions:
 - How do I sample Atlas data?

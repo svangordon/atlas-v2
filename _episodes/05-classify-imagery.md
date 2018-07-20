@@ -65,8 +65,6 @@ var testingSet = landsatData.filter(ee.Filter.gte('random', trainingSize))
 ~~~
 {:. .source .language-javascript}
 
-~~~
-
 Let's put our training and testing points on the map.
 ~~~
 

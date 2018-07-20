@@ -1,20 +1,15 @@
 ---
 title: "Importing Rasters"
-teaching: 5
+teaching: 30
 exercises: 30
 questions:
-- What are Atlas and Atlas V2?
-- What is the relationship between Atlas and Atlas V2?
-- How was Atlas V2 produced?
-- What are the temporal and spatial scales of these datasets?
+- How do we load our own datasets on to Earth Engine?
 objectives:
-- Understand what the Atlas and Atlas V2 datasets are
-- Understand how it is possible to go from 2km to 30m scale
+- Load a custom dataset on to EE.
 keypoints:
-- Atlas is a classification of Landsat pixels
-- Atlas V2 uses the Atlas dataset as its labels
-- The Atlas V2 process can be done with different labels and different features
-- Atlas V2 is approximately as accurate as Atlas
+- Rasters and vectors can be loaded using the assets tab.
+- Pyramiding policy must be set on import.
+- No-data value can be used to mask images.
 ---
 
 The Atlas and Atlas V2 datasets are land cover maps of the West African Sahel. In this lesson, we will discuss these datasets, how they were produced, how they are related, and how you might use them in your map.
