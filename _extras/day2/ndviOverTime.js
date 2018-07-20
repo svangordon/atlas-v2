@@ -12,6 +12,7 @@ var ls8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
 
 var getNdvi = function(image) {
   return image.normalizedDifference(['B5', 'B4'])
+    .copyProperties(image, ['system:time_start'])
 }
 
 var getMean = function(image) {

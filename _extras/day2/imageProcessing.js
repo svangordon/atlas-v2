@@ -1,4 +1,3 @@
-//TODO: Include the numbers here. Check that it runs.
 
 /*
   Image Collections
