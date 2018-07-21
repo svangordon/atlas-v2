@@ -44,7 +44,7 @@ ImageCollection users/svangordon/conference/atlas_v2/collections/classify (5 ele
 
 ## Images vs Image Collections
 
-We're going to look into loading the Atlas and AtlasV2 images as both Images and Image Collections. You may be wondering what the difference is between and image and an image collection. An Image is a raster object, stored on the Earthe Engine servers. A collection is a container that holds any number of images (or features). You can think of it like a folder or directory on a computer. It's kind of like a sack. You might also think of it similar to a list or an array, with a few key differences. In a list or array, you can access arbitrary elements in the list. For example:
+We're going to look into loading the Atlas and AtlasV2 images as both Images and Image Collections. You may be wondering what the difference is between and image and an image collection. An Image is a raster object, stored on the Earth Engine servers. A collection is a container that holds any number of images (or features). You can think of it like a folder or directory on a computer. It's kind of like a sack. You might also think of it similar to a list or an array, with a few key differences. In a list or array, you can access arbitrary elements in the list. For example:
 ~~~
 var myList = ee.List(1, 3, 5, 9, 2)
 var thirdElement = myList.get(2)

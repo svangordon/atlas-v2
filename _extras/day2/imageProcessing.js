@@ -1,9 +1,11 @@
+// The script that we used turned out to be:
+// https://code.earthengine.google.com/98173c912df19bcccecb346bfa774408
 
 /*
   Image Collections
 
     Yesterday, we touched a little bit on Image Collections. Image Collections
-  are a collection method callsof images. They're kind of like a big sack that holds a bunch
+  are a collection prinof images. They're kind of like a big sack that holds a bunch
   of images. Image collections can be filtered, so that certain images are excluded
   based on things like location, time, or metadata (such as quality). Image collections
   can be mapped. When we map over a collection, we use a single function to change
@@ -67,7 +69,7 @@ print('After filtering date, collection size:', filteredImages.size())
 print('Expected Size:', 64)
 
 /*
-    Every Landsat scene has a 'CLOUD_COVER' property. This represents the percentage
+    Every Landsat scene has a 'CLOUD_COVER' property. This represents the percentage
   of the scene that is covered in clouds. We will filter out scenes that are covered
   by 40% clouds or greater. .filter() takes as a property an ee.Filter object.
   You can read more about the filters in the Docs tab. We are going to use the

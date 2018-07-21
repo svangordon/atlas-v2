@@ -20,7 +20,7 @@ Because of the high temporal resolution of AtlasV2, we are able to get more mean
 Transition matrices are also known as stochastic matrices. Stochastic matrices are used to describe the transitions of a Markov chain. That's basically treating the land cover system sort of like a state machine, which is actually pretty cool. -->
 
 ## Process Overview
-To create our transition matrix, we are going to associate the image from each year in the AtlasV2 collection with the image from the year after. So we will combine the image from 2000 with the image from 2001, the image from 2001 from the image with 2002, and so forth.
+To create our transition matrix, we are going to associate the image from each year in the AtlasV2 collection with the image from the year after. So we will combine the image from 2000 with the image from 2001, the image from 2001 with the image with 2002, and so forth.
 ~~~
 [2000, 2001],
 [2001, 2002],

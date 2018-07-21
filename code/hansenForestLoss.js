@@ -6,9 +6,10 @@ Map.addLayer(hansen, hansenVis, 'Forest 2000')
 
 // Load the LSIB country boundary collection.
 var countryBoundaries = ee.FeatureCollection('USDOS/LSIB/2013')
-
+var countryName = 'NIGER'
+print('Annual Forest Loss for', countryName)
 // Get boundaries for a single country
-var countryGeometry = countryBoundaries.filter(ee.Filter.equals('name', 'NIGERIA'))
+var countryGeometry = countryBoundaries.filter(ee.Filter.equals('name', countryName))
 
 // Loss areas
 var annualLosses = ee.List.sequence(1, 17)
@@ -45,26 +46,6 @@ var yearLabels = ee.List.sequence(2001, 2017)
 
 print(yearLabels)
 
-// var lossYearArray = annualLosses.zip(ee.List.sequence(2001,2017))
-// Not this:
-// {
-//   "offset": 2003.7789883384153,
-//   "scale": 4.106325262551609e-9
-// }
-// =====
-// This:
-// {
-//   "offset": -272681985212.27222,
-//   "scale": 136363086.68786043
-// }
-// 2001: 180551250.136505
-// 2017: 2362360637.142273
-// [[2001, 180551250.136505],
-// [2017, 2362360637.142273]]
-//
-// function slopeForYear(year) {
-//   y = ee.Number(year).multip
-// }
 
 var lossYearArray = ee.List.sequence(2001,2017).zip(annualLosses)
 var linFit = lossYearArray.reduce(ee.Reducer.linearFit())

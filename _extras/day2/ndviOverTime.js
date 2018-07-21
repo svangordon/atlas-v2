@@ -1,5 +1,5 @@
 // var geometry = ee.Geometry.Point([2.5, 12])
-var geometry = ee.Geometry.Rectangle(
+var aoi = ee.Geometry.Rectangle(
   [
     // Coordinates for the botom-left
     2.2, 11.9,
@@ -11,13 +11,14 @@ var geometry = ee.Geometry.Rectangle(
 var ls8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
 
 var getNdvi = function(image) {
-  return image.normalizedDifference(['B5', 'B4'])
+  return image.clip(aoi).normalizedDifference(['B5', 'B4'])
+    .rename('ndvi')
     .copyProperties(image, ['system:time_start'])
 }
 
 var getMean = function(image) {
   var result = image.reduceRegion({
-    geometry: geometry,
+    geometry: aoi,
     reducer: ee.Reducer.mean(),
     scale: 30,
     maxPixels: 1e13
@@ -37,9 +38,11 @@ var getPrecipitationData = function(image) {
     .filterDate(startDate, endDate)
     .sum()
   return image.addBands(percipitationData)
+    .set('start', startDate)
+    .set('end', endDate)
 }
 
-var ndviOverTime = ls8.filterBounds(geometry)
+var ndviOverTime = ls8.filterBounds(aoi)
   .filterDate('2016-01-01', '2016-12-31')
   .filter(ee.Filter.lt('CLOUD_COVER', 0.4))
   .map(getNdvi)
@@ -47,7 +50,11 @@ var ndviOverTime = ls8.filterBounds(geometry)
     Map.addLayer(ndviCollection, {min: -1, max:1, palette:['brown', 'yellow', 'green' ]})
   })
   .map(getPrecipitationData)
+  .aside(function(combinedCollection) {
+    Map.addLayer(combinedCollection, {min: -1, max:1, bands: 'ndvi', palette:['brown', 'yellow', 'green' ]})
+  })
   .map(getMean)
 
 print(ndviOverTime)
 Export.table.toAsset(ndviOverTime)
+// https://code.earthengine.google.com/a44c243baa661c0ca76c892e976e0769
