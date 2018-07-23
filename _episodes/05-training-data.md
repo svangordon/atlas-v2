@@ -48,11 +48,11 @@ var landsat7Collection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
 
 One of the surprising things we learned while making the Atlas V2 dataset was that the classification was more accurate when we trained many classifiers on small areas of the region. It's sort of like how you're better able to recognize your friends than strangers because you see your friends more often. When we produced the Atlas V2 dataset, we split the Sahel region into a grid of 0.5° squares, and did the training and classification process separately for each zone. Doing the classification on smaller zones also helps avoid timeouts or out-of-memory errors.
 
-To generate the training zones, we use a little trick that we'll use a few times. We're going to create an raster of random values at the scale that we want, and then we will reduce that raster to an collection of vectors.
+To generate the training zones, we use a little trick that we'll use a few times. We're going to create an raster of random values at the scale and projection that we want, and then we will reduce that raster to an collection of vectors.
 
 We need a geometry to use to bound our classification zones. Let's use just draw a point on the map. We'll make the zones 56000m square, which is roughly 0.5 degrees.
 ~~~
-var classificationArea = /* color: #d63000 */ee.Geometry.Point([-12.392578125, 12.399002919688813]);
+var classificationArea = ee.Geometry.Point([-12.392578125, 12.399002919688813]);
 var zoneSize = 55000
 ~~~
 {:. .source .language-javascript}
@@ -129,13 +129,18 @@ _List of landsat scenes in the AOI for the year of interest._
 ## Masking Satellite Images
 Some of these Landsat scenes are pretty cloudy. Before we can use them for our classifier, we would like to clean up the clouds. Landsat images have a `pixel_qa` band that contains information about whether a band is likely to be a cloud, a fill pixel, a shadow, etc. It also contains a `radsat_qa`, which will be equal to 0 if no bands are saturated.
 
-`pixel_qa` is bit packed, meaning that its a number of boolean variables (ie, 0 or 1) that are put in a list and converted into a base 10 integer. For example, say we were storing information about animals. We might want to store information about whether an animal had fur, whether it had a tail, and whether it could fly. The first bit is in the `2 ** 0` (1) place, the second bit is in the `2 ** 1` (2) place, the third bit is in the `2 ** 2` (4) place. If we wanted to store information about a dog (fur, tail, cannot fly), it would be bit packed like this:
+`pixel_qa` is bit packed, meaning that its a number of boolean variables (ie, 0 or 1) that are put in a list and converted into a base 10 integer. For example, say we were storing information about three different properties. The first bit is in the `2 ** 0` (1) place, the second bit is in the `2 ** 1` (2) place, the third bit is in the `2 ** 2` (4) place. If we wanted to store information where the first two properties were present and the third was not, it would be bit packed like this:
 ~~~
-furBit = 1
-tailBit = 1
-flyBit = 0 => [0, 1, 1] => [0, 2, 1] => 3
+bit1 = 1
+bit2 = 1
+bit3 = 0
+=>
+[0, 1, 1] => [0, 2, 1] => 3
 ~~~
 {:. .output}
+> ## Why are these numbers right to left?
+>
+> That's just the way that binary is.
 
 Let's create a function that can mask landsat images for clouds.
 ~~~
