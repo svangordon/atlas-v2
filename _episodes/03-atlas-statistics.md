@@ -1,5 +1,5 @@
 ---
-title: "Basic Image Statistics"
+title: "Image Statistics"
 teaching: 35
 exercises: 10
 questions:
