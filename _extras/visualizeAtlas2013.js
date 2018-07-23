@@ -99,4 +99,14 @@ ecowas = ee.Algorithms.GeometryConstructors.MultiGeometry(ecowas)
 print(ecowas)
 // ecowas = ee.Geometry.MultiLineString(ecowas)
 
+Map.centerObject(atlasV2_2013)
+var zoneGeometries = require('users/svangordon/west-africa-lulc:zoneGeometries')
+zoneGeometries = ee.FeatureCollection(zoneGeometries)
+  .geometry().coordinates()
+  .map(function(coords) {
+    return ee.Algorithms.GeometryConstructors.MultiLineString(coords)
+  })
+  zoneGeometries = ee.Algorithms.GeometryConstructors.MultiGeometry(zoneGeometries)
+
 Map.addLayer(ecowas, {color: 'Black'}, 'Ecowas')
+Map.addLayer(zoneGeometries, {}, 'Zone Geometries')
