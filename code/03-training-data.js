@@ -1,7 +1,7 @@
 var landsat7Collection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
 
 var classificationArea = /* color: #d63000 */ee.Geometry.Point([-12.392578125, 12.399002919688813]);
-var zoneSize = 55000
+var zoneSize = 56000
 
 var classificationZones = ee.Image.random()
   .multiply(10000000)
