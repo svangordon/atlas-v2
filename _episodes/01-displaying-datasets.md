@@ -122,7 +122,7 @@ For `palette`, we will use a list of hex colors, derived from the Atlas metadata
 
 I'm not going to make us type out the palette for all 26 classes. Instead, we can access it in Earth Engine at the link below, and paste it into our code.
 
-[bit.ly/2JuWicu](bit.ly/2JuWicu)
+[https://code.earthengine.google.com/91e45be25ed0db2f2d54c6aaaa908b88](https://code.earthengine.google.com/91e45be25ed0db2f2d54c6aaaa908b88)
 
 ~~~
 var atlasPalette = [

@@ -45,8 +45,7 @@ Currently, not all of the region covered by Atlas is classified in Atlas V2. The
 ## Viewing Datasets
 We will talk more soon about how to view these datasets. For now, let's just look at them in Earth Engine.
 
-The following link will display the Atlas and AtlasV2 data for 2013.
-http://bit.ly/2mqrMHr
+A visualization of the dataset can be viewed in the script `users/svangordon/atelier/visualize2013`.
 
 Let's take ten minutes to look around the data. Record some of your observations about the classification -- its accuracy, any artifacts, what it does well, or what it does not do well.
 
