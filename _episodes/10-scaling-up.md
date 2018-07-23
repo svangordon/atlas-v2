@@ -286,4 +286,35 @@ var classifiedImages = yearZonePairs.map(classifyImage).flatten()
 {:. .source .language-javascript}
 
 ## Exporting Classified Images
-We now want to export all of these classified images as batch jobs. One problem is that when 
+We now want to export all of these classified images as batch jobs. This code will be explained more shortly.
+
+~~~
+classifiedImages.size().evaluate(function(clfdImagesSize) {
+  print('starting eval fn')
+  var numberOfZones = yearZonePairs.size().getInfo()
+  var numberOfYears = classificationYears.length
+  for (var imageIndex = 0; imageIndex < clfdImagesSize; imageIndex++) {
+    var zoneId = Math.floor(imageIndex / numberOfYears)
+    var yearIndex = imageIndex % numberOfYears
+    var year = classificationYears[yearIndex]
+    print('zoneId', zoneId, 'year', year)
+
+    var classificationAoi = ee.Feature(yearZonePairs.toList(1, zoneId).get(0)).geometry()
+    var classifiedImage = ee.Image(clfdImages.get(imageIndex))
+
+    // Export classified Image
+    Export.image.toDrive({
+      image: classifiedImage,
+      folder: 'classifiedLulc',
+      region: classificationAoi,
+      fileNamePrefix: 'classification_zone_' + zoneId + '_' + year,
+      scale: 30,
+      description: 'classification_zone_' + zoneId + '_' + year,
+      maxPixels: 1e13
+    });
+  }
+  // var zoneId =
+  // print('clfd images size', size, yearsSize)
+})
+~~~
+{:. .source .language-javascript}

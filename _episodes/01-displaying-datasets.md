@@ -272,7 +272,6 @@ You might like to export a region of a classified image so that you can use it o
 Export.image.toDrive({
   image: atlasV2_2013,
   folder: 'classifiedLulc',
-  region: countryGeometry,
   fileNamePrefix: 'atlasV2_2013',
   scale: 30,
   description: 'atlasV2_2013',
@@ -281,7 +280,7 @@ Export.image.toDrive({
 ~~~
 {:. .source .language-javascript}
 
-This outputs the image as a `.tiff` file. That's an ideal choice if you are planning to work with the image in another kind of GIS software, such as QGis. But, if you would prefer to display the image in a way that's easier to display -- for example, if you want an image for a presentation, or to put on a website, you will want to convert the image to RGB format. Use the `.visualize` method, and pass the visualization parameters you would usually use to display the image on the map. Earth Engine will convert the image to a three band RGB image.
+This outputs the image as a `.tiff` file. That's an ideal choice if you are planning to work with the image in another kind of GIS software. But, if you would prefer to display the image in a way that's easier to display -- for example, if you want an image for a presentation, or to put on a website, you will want to convert the image to RGB format. Use the `.visualize` method, and pass the visualization parameters you would usually use to display the image on the map. Earth Engine will convert the image to a three band RGB image.
 
 ~~~
 // Export a classified Image
