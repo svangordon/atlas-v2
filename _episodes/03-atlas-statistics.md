@@ -48,6 +48,7 @@ _Documentation for ee.Image().reduceRegion()_
 
 Let's go ahead and reduce one of our Atlas V2 images. We will use the `ee.Reducer.frequencyHistogram()`, which counts the number of times each value is present. Note that these numbers are not the areas of each class, but instead are the number of pixels of each class.
 ~~~
+var atlasV2_2013 = ee.Image('users/svangordon/conference/atlas_v2/classify/2013')
 var imageReduction = atlasV2_2013.reduceRegion({
     reducer: ee.Reducer.frequencyHistogram(),
     scale: 30,
@@ -90,6 +91,7 @@ In the output, you can see that we're returning an object with one property, `b1
 
 Let's take only the `b1` property of our reduction output, and cast it to a dictionary.
 ~~~
+// Get the `b1` (landcover) histogram
 var pixelCounts = ee.Dictionary(imageReduction.get('b1'))
 ~~~
 {:. .source .language-javascript}
@@ -103,7 +105,6 @@ The `.frequencyHistogram()` reducer gives a count of pixels, not a total area. T
 
 ~~~
 var conversionCoefficient = 0.0009
-// Get the `b1` (landcover) histogram
 ~~~
 {:. .source .language-javascript}
 
@@ -156,7 +157,7 @@ Object (23 properties)
 
 The method that we have laid out produces statistics for an entire image. However, it is also possible for us to get statistics for a defined region, such as a country or a custom geometry. When we make our `.reduceRegion` call, we will also provide a geometry to perform the reduction over.
 
-#### Custom Geometry
+### Custom Geometry
 Let's start by drawing a polygon on the map. This geometry is now available to us as `geometry`. That's the only difference between getting statistics for a region and for an entire image: we are now providing a geometry for the reduction.
 ~~~
 // Make sure to draw a custom geometry on the map!
@@ -177,7 +178,7 @@ print('regional areas', regionalAreas)
 ~~~
 {:. .source .language-javascript}
 
-#### Country Geometries
+### Country Geometries
 We can also perform reductions over predefined geometries, like country boundaries. One collection of country boundaries that is available in Earth Engine is the US DoS's Large-Scale International Boundary collection. We can import it as a feature collection:
 ~~~
 var countryBoundaries = ee.FeatureCollection('USDOS/LSIB/2013')
@@ -198,6 +199,15 @@ var countryGeometry = countryBoundaries.filter(ee.Filter.equals('name', 'NIGER')
 Map.addLayer(countryGeometry)
 ~~~
 {:. .source}
+
+> Ecowas Boundaries
+>
+> In our Earth Engine trainings, we uploaded Ecowas boundaries as an Earth Engine asset. If you would like to continue using that asset, you can load it with the following code (replace `svangordon` with your username):
+~~~
+var countryBoundaries = ee.FeatureCollection('users/svangordon/ecowas')
+var countryGeometry = countryBoundaries.filter(ee.Filter.eq('NAME', 'Burkina Faso'))
+~~~
+{:. .source .lanaguage-javascript}
 
 Using a country as the region for a reduction is not any different than using our custom geometry:
 ~~~
@@ -376,7 +386,7 @@ When we try and display a chart later on, we will need to know what classes are 
 
 ~~~
   areaCollection = ee.FeatureCollection(areaCollection)
-    .set('classes', ee.Feature(areaCollection.first()).toDictionary().keys())
+    .set('classes', ee.Feature(ee.FeatureCollection(areaCollection).first()).toDictionary().keys())
   return areaCollection
 }
 ~~~

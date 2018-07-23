@@ -84,8 +84,19 @@ function maskLandsat(image) {
 
 var landsatImage = lsCollection.map(maskLandsat)
   .aside(function(collection) {
-    Map.addLayer(collection.median(), {min: 0, max: 3000, bands: "B3, B2, B1"}, 'masked')
+    Map.addLayer(collection.median(), {min: 0, max: 3000, bands: "B3, B2, B1"}, 'Landsat')
   })
 
 displayClassification(atlas_2013, 'Atlas 2013')
 displayClassification(atlasV2_2013, 'AtlasV2 2013')
+
+var ecowas = ee.FeatureCollection('users/svangordon/ecowas')
+ecowas = ecowas.geometry().coordinates()
+  .map(function(coords) {
+    return ee.Algorithms.GeometryConstructors.MultiLineString(coords)
+  })
+ecowas = ee.Algorithms.GeometryConstructors.MultiGeometry(ecowas)
+print(ecowas)
+// ecowas = ee.Geometry.MultiLineString(ecowas)
+
+Map.addLayer(ecowas, {color: 'Black'}, 'Ecowas')

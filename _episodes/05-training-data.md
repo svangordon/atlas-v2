@@ -1,5 +1,5 @@
 ---
-title: "Creating Basemap"
+title: "Creating a Basemap"
 teaching: 45
 exercises: 0
 questions:
@@ -16,8 +16,14 @@ keypoints:
 - Landsat images can be filtered for clouds with the `radsat_qa` and `pixel_qa` bands
 ---
 
-## Overview of the AtlasV2 process
-Up to this point, we've discussed how to use and interact with the Atlas and Atlas V2 data. We're now going to begin to talk more about how you can use this process to produce your own land cover datasets. We will first give a rudimentary overview of the whole process, including assembling training data, sampling data, training a classifier, and classifying images. After we have gone through the whole process, we will discuss ways to improve the performance of the datasets and how to perform the process on a larger scale.
+## Overview of Creating a Basemap
+Up to this point, we've discussed how to use and interact with the Atlas and Atlas V2 data. We're now going to begin to talk more about how you can use this process to produce your own land cover datasets. The first step in this process is creating a basemap, from which we will extract our training data. For this, we will:
+* **Select a dataset:** We need to decide what dataset of satellite imagery we will use for our basemap. In this example, we will use Landsat 7 SR.
+* **Generate a classification zone:** We limit our classification to a region approximately 0.5 degrees square. We generate this geometry in Earth engine, and use it to filter the image collection of satellite data. In this example, we use an area in the Guinea Highlands.
+* **Create a time filter:** We do not want to use the images from the entire year. Instead, we want to create a filter that we will use to limit our satellite dataset to times of the year when those images are best for classification (generally, when the land cover classes are the most different). In this example, we will use imagery from September to November. We will also use imagery from our year of interest, as well as the year before and the year after, in order to ensure that we have enough imagery.
+* **Process input imagery:** We will use image processing to improve the quality of our input images. We will mask for clouds, etc.
+
+We will first give a rudimentary overview of the whole process, including assembling training data, sampling data, training a classifier, and classifying images. After we have gone through the whole process, we will discuss ways to improve the performance of the datasets and how to perform the process on a larger scale.
 
 In this section, we will discuss assembling the satellite imagery that will be used to train our classifier.
 
@@ -176,6 +182,7 @@ We combine that radsat mask with a bitwise mask for each of the different `pixel
 {:. .source .language-javascript}
 ~~~
 We now want to drop any of the metadata bands from the image (`pixel_qa`, `radsat_qa`, etc)
+~~~
     .select(['B1', 'B2', 'B3', 'B4', 'B5', 'B7'])
 }
 ~~~
@@ -194,4 +201,4 @@ Map.addLayer(landsatImage, {min: 0, max: 3000, bands: "B3, B2, B1"})
 ~~~
 {:. .source .language-javascript}
 
-Code available at bit.ly/2uCzfHj
+/*Code available at bit.ly/2uCzfHj*/

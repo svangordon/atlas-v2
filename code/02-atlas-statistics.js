@@ -92,8 +92,9 @@ function getCollectionAreas(imageCollection, conversionCoefficient, reductionGeo
       })
     return ee.Feature(null, classAreas)
   })
+  print('areaCollection', areaCollection)
   areaCollection = ee.FeatureCollection(areaCollection)
-    .set('classes', ee.Feature(areaCollection.first()).toDictionary().keys())
+    .set('classes', ee.Feature(ee.FeatureCollection(areaCollection).first()).toDictionary().keys())
   return areaCollection
 }
 var atlasV2Collection = ee.ImageCollection('users/svangordon/conference/atlas_v2/collections/classify')

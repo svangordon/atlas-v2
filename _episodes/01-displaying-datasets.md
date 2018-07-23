@@ -166,7 +166,7 @@ There are 26 Atlas classes, so we must remap our image to numbers from 1 to 26. 
 For the `from` list, we will use the list of Atlas classes we created using the Atlas metadata. For the `to` list, we will use an `ee.List.sequence` of the numbers 1 to 26.
 ~~~
 var atlasClasses = [1,2,3,4,6,7,8,9,10,11,12,13,14,15,21,22,23,24,25,27,28,29,31,32,78,99]
-var remappedImage = atlas_2000.remap(atlasClasses, ee.List.sequence(1, 26))
+var remappedImage = atlasV2_2000.remap(atlasClasses, ee.List.sequence(1, 26))
 /*Map.addLayer(remappedImage, {min:1, max:26, palette: atlasPalette}, 'Atlas Classification')*/
 ~~~
 {: source .language-javascript}
