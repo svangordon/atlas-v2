@@ -28,7 +28,7 @@ We are going to be talking to you about the Atlas and Atlas V2 datasets.
 <img src="../fig/01-atlas-2013.png" border="10" >
 _2013 Atlas Classification_
 
-The [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usgs.gov/westafrica/) is a land cover dataset produced by USGS, USAID, and CILSS. This land cover dataset was produced by experts in West Africa, who hand classified 1,200,000 pixels. The dataset is available at 2km resolution, and three maps are available: 1975, 2000, and 2013. Advantages of this dataset include its high reliability and its class system, which was chosen by researchers in the region and is suited to West Africa. Atlas classes are specific to West Africa; for example, in addition to classes like forest or settlement, there are classes like short grass savanna, bowe, steppe, etc. One disadvantage of this dataset is its coarse resolution (2km). It is also very time and labor intensive to produce; it takes a large number of researchers over a year to produce a land cover map for a year.
+The [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usgs.gov/westafrica/) is a land cover dataset produced by USGS, USAID, and CILSS. This land cover dataset was produced by experts in West Africa, who hand classified 1,200,000 pixels. The dataset is available at 2km resolution, and three maps are available: 1975, 2000, and 2013. Advantages of this dataset include its high reliability and its class system, which was chosen by researchers in the region and is suited to West Africa. Atlas classes are specific to West Africa; for example, in addition to classes like forest or settlement, there are classes like short grass savanna, bowe, steppe, etc. One disadvantage of this dataset is its coarse resolution (2km). It is also very time and labor intensive to produce: it took a large number of researchers over a decade to produce three land cover maps.
 
 The Atlas dataset is available for download from the USGS website. [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usgs.gov/westafrica/)
 
@@ -45,9 +45,9 @@ Currently, not all of the region covered by Atlas is classified in Atlas V2. The
 ## Viewing Datasets
 We will talk more soon about how to view these datasets. For now, let's just look at them in Earth Engine.
 
-A visualization of the dataset can be viewed in the script `users/svangordon/atelier/visualize2013`.
+A visualization of the dataset can be viewed in the script `users/svangordon/atelier/visualize2013`. If you haven't been added to that repo, you can gain access by clicking this link: [https://code.earthengine.google.com/?accept_repo=users/svangordon/atelier](https://code.earthengine.google.com/?accept_repo=users/svangordon/atelier).
 
-Let's take ten minutes to look around the data. Record some of your observations about the classification -- its accuracy, any artifacts, what it does well, or what it does not do well.
+Let's take some time to look around the data. Record some of your observations about the classification -- its accuracy, any artifacts, what it does well, or what it does not do well.
 
 > ## Discussion
 >

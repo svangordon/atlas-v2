@@ -69,6 +69,15 @@
           </ul>
         </li>
 	{% endif %}
+        <li class="dropdown">
+          <a href="{{ page.root }}/" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">EE Trainings <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <!-- <li><a href="{{ page.root }}{% link reference.md %}">Reference</a></li> -->
+            {% for training in site.trainings %}
+            <li><a href="{{ page.root }}{{ training.url }}">{{ training.title }}</a></li>
+            {% endfor %}
+          </ul>
+        </li>
 
 	{% comment %} Always show license. {% endcomment %}
         <!-- <li><a href="{{ page.root }}{% link LICENSE.md %}">License</a></li> -->

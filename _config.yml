@@ -60,6 +60,9 @@ collections:
   extras:
     output: true
     permalink: /:path/index.html
+  trainings:
+    output: true
+    permalink: /:path/index.html
 
 # Set the default layout for things in the episodes collection.
 defaults:
@@ -75,6 +78,12 @@ defaults:
   - scope:
       path: ""
       type: extras
+    values:
+      root: ..
+      layout: page
+  - scope:
+      path: ""
+      type: trainings
     values:
       root: ..
       layout: page

@@ -1,5 +1,5 @@
 ---
-title: "Compiling Training Data"
+title: "Creating Basemap"
 teaching: 45
 exercises: 0
 questions:
