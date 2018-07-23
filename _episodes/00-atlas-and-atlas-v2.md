@@ -28,7 +28,7 @@ We are going to be talking to you about the Atlas and Atlas V2 datasets.
 <img src="../fig/01-atlas-2013.png" border="10" >
 _2013 Atlas Classification_
 
-The [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usgs.gov/westafrica/) is a land cover dataset produced by USGS, USAID, and CILSS. This land cover dataset was produced by experts in West Africa, who hand classified 1,200,000 pixels. The dataset is available at 2km resolution, and three maps are available: 1975, 2000, and 2013. Advantages of this dataset include its high reliability and its class system, which was chosen by researchers in the region and is suited to West Africa. Atlas classes are specific to West Africa; for example, in addition to classes like forest or settlement, there are classes like short grass savanna, bowe, steppe, etc. One disadvantage of this dataset is its coarse resolution (2km). It is also very time and labor intensive to produce: it took a large number of researchers over a decade to produce three land cover maps.
+The [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usgs.gov/westafrica/) is a land cover dataset produced by USGS, USAID, and CILSS. This land cover dataset was produced by experts in West Africa, who hand classified 1,200,000 pixels. The dataset is available at 2km resolution, and three maps are available: 1975, 2000, and 2013. Advantages of this dataset include its high reliability and its class system, which was chosen by researchers in the region and is suited to West Africa. Atlas classes, taken from the Yangambi classification system, are appropriate for West Africa; for example, in addition to classes like forest or settlement, there are classes like short grass savanna, bowe, steppe, etc. One disadvantage of this dataset is its coarse resolution (2km). It is also very time and labor intensive to produce: it took a large number of researchers over a decade to produce three land cover maps.
 
 The Atlas dataset is available for download from the USGS website. [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usgs.gov/westafrica/)
 
@@ -38,7 +38,7 @@ _2016 Atlas V2 Classification_
 
 The Atlas V2 is a land cover dataset produced by Mollie Van Gordon at the University of California, Berkeley. This dataset uses the Atlas as training data to perform machine classification of satellite imagery. By using the Atlas data to train machine learning algorithms, we can produce land cover maps of the West Africa region that are of a similar accuracy as the Atlas dataset, but at a higher resolution. The dataset was produced using the Google Earth Engine cloud computing platform, which is freely available to the public. Because we used Earth Engine and publicly available datasets, we can create land cover maps at low or no cost, and annually.
 
-Currently, the V2 team has produced a 30m land cover dataset using Landsat images for every year between 2000 and 2016. This dataset is currently available on Google Earth Engine. The process for creating these datasets is flexible. Different datasets can be used in place of both Landsat and Atlas. For example, researchers could use Sentinel imagery to produce a map at 20m resolution, or researchers could hand classify a small area of interest to produce a land cover map at an even higher accuracy.
+Currently, the V2 team has produced a 30m land cover dataset using Landsat images for every year between 2000 and 2016. This dataset is currently available on Google Earth Engine. The process for creating these datasets is flexible. Different datasets can be used in place of both Landsat and Atlas. For example, researchers could hand classify a small area of interest to produce a land cover map at an even higher accuracy.
 
 Currently, not all of the region covered by Atlas is classified in Atlas V2. The southern coast of West Africa has been excluded, due to issues with finding cloud-free images. Southern Chad has also not been classified, due to issues with scale (in Atlas, Chad is at 4km resolution). Both of these omissions are due to time constraints: there's no reason that we couldn't classify the entire region, and in fact we're eager to. We just haven't had time yet!
 
@@ -51,6 +51,10 @@ Let's take some time to look around the data. Record some of your observations a
 
 > ## Discussion
 >
-> * What are the differences between the Atlas and the AtlasV2 datasets?
+> * What are the possibilities for using Atlas V2? What do you want to be able to do with it?
+> * What aspects of Atlas V2 _are_ or _would be_ important? What do you need from AtlasV2 to be able to use it for your applications? Consider both current aspects and future development.
+> * Choose a small area from the dataset that you are interested in. Make some observations about the AtlasV2 data there (use image visualization script).
+{:. .challenge}
+<!-- * What are the differences between the Atlas and the AtlasV2 datasets?
 > * What are some areas where the Atlas or AtlasV2 is doing well? Where does it not do so well?
-> * In what ways might the AtlasV2 dataset be useful for your work?
+> * In what ways might the AtlasV2 dataset be useful for your work? -->

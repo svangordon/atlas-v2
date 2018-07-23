@@ -129,18 +129,16 @@ _List of landsat scenes in the AOI for the year of interest._
 ## Masking Satellite Images
 Some of these Landsat scenes are pretty cloudy. Before we can use them for our classifier, we would like to clean up the clouds. Landsat images have a `pixel_qa` band that contains information about whether a band is likely to be a cloud, a fill pixel, a shadow, etc. It also contains a `radsat_qa`, which will be equal to 0 if no bands are saturated.
 
-`pixel_qa` is bit packed, meaning that its a number of boolean variables (ie, 0 or 1) that are put in a list and converted into a base 10 integer. For example, say we were storing information about three different properties. The first bit is in the `2 ** 0` (1) place, the second bit is in the `2 ** 1` (2) place, the third bit is in the `2 ** 2` (4) place. If we wanted to store information where the first two properties were present and the third was not, it would be bit packed like this:
-~~~
-bit1 = 1
-bit2 = 1
-bit3 = 0
-=>
-[0, 1, 1] => [0, 2, 1] => 3
-~~~
-{:. .output}
-> ## Why are these numbers right to left?
->
-> That's just the way that binary is.
+> ## `pixel_qa` Bit
+>The `pixel_qa` bit represents the output of the CFMASK algorithm. The USGS runs Landsat imagery through an algorithm which determines if the pixel is likely to be cloud, snow, cloud shadow, etc. The `pixel_qa` bit is is *bit packed*. This means that its value contains a number of boolean variables (ie, 0 or 1) that are put in a list. That list of numbers is converted into the binary representation of a base 10 integer. For example, say we were storing information about three different properties. The first bit is in the `2 ** 0` (1) place, the second bit is in the `2 ** 1` (2) place, the third bit is in the `2 ** 2` (4) place. If we wanted to store information where the first two properties were present and the third was not, it would be bit packed like this:
+> ~~~
+> bit1 = 1
+> bit2 = 1
+> bit3 = 0
+> =>
+> [1, 1, 0] => [1, 2, 0] => 3
+> ~~~
+> {:. .output}
 
 Let's create a function that can mask landsat images for clouds.
 ~~~
@@ -205,5 +203,3 @@ var landsatImage = landsat7Collection
 Map.addLayer(landsatImage, {min: 0, max: 3000, bands: "B3, B2, B1"})
 ~~~
 {:. .source .language-javascript}
-
-/*Code available at bit.ly/2uCzfHj*/

@@ -4,7 +4,6 @@ teaching: 20
 exercises: 5
 questions:
 - How do we display the Atlas and Atlas V2 datasets?
-- How can we reuse code in different scripts?
 objectives:
 - Understand how to load Atlas and Atlas V2 datasets into Earth Engine
 - Understand how to visualize Atlas and Atlas V2 images

@@ -276,7 +276,7 @@ That's a fair score: we're doing alright, though there's room for improvement.
 
 ## Classifying an Image
 
-We have a trained classifier; let's use it to classify an image. First let's import the function we created earlier to display Atlas classifications.
+We have a trained classifier; let's use it to classify an image. First let's paste in the function we created earlier to display Atlas classifications.
 
 ~~~
 var workshopTools = require('users/svangordon/lulc-conference:workshopTools')
