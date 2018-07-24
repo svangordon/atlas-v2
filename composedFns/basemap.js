@@ -244,7 +244,10 @@ function ClassifyZone(classificationZone) {
   var classificationYear = 2016
 
   // Training bands: the names of the bands that we will classify on
-  var trainingBands = ['B1', 'B2', 'B3', 'B4', 'B5', 'B7']
+  var ls7Bands = ['B1', 'B2', 'B3', 'B4', 'B5', 'B7']
+  var ls8Bands = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B10', 'B11']
+  var demBands = ['aspect', 'elevation', 'hillshade', 'slope']
+  var trainingBands = ls7Bands
   var classBand = 'b1'
 
   var trainingImageCollection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
@@ -260,16 +263,25 @@ function ClassifyZone(classificationZone) {
 
   var inputData = sampleCollection(trainingImage, labelImage, samplingPoints)
   var inputDataSize = ee.FeatureCollection(inputData).size()
-  // return ee.Algorithms.If(ee.Number(inputDataSize).eq(0),
-  //   ee.Image(0).clip(classificationZone),
-  //   ee.Image(1).clip(classificationZone)
-  // )
+
   // Uses a random forest by default. Change trainClassifier function if you
   // would like to adjust that.
   var trainingResult = trainClassifier(inputData, trainingBands)
   var classifier = trainingResult.get('classifier')
   classifier = ee.Classifier(classifier)
-  return trainingImage.classify(classifier)
+  var classifiedImage = trainingImage.classify(classifier)
+
+  Export.image.toDrive({
+    image: classifiedImage,
+    folder: 'classifiedLulc',
+    region: classificationZone,
+    fileNamePrefix: 'atlasV2_' + classificationYear,
+    scale: 30,
+    description: 'atlasV2_' + classificationYear,
+    maxPixels: 1e13
+  });
+
+  return classifiedImage
 }
 
 /*
