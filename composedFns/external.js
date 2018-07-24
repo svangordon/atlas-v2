@@ -93,6 +93,7 @@ function toPoint(feature) {
 }
 
 function getTrainingInputs(basemap, labels, samplingGeometry, samplingScale) {
+  // Use the or operator (which is ||) to set a default value for sampling scale
   samplingScale = samplingScale || 30;
   basemap = ee.Image(basemap)
   labels = ee.Image(labels)

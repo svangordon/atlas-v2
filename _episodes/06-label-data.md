@@ -1,5 +1,5 @@
 ---
-title: "Sampling Data"
+title: "Matching Basemap with Labels"
 teaching: 20
 exercises: 0
 questions:

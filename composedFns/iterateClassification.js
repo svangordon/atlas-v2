@@ -5,7 +5,6 @@ var classifyZone = internalFunctions.classifyZone
 var getZonesBoundaries = internalFunctions.getZonesBoundaries
 
 function iterator(currentZone, accum) {
-
   var classifiedZone = ee.Image(classifyZone(currentZone))
   // var catdImage = ee.Image.cat(accum, classifiedZone)
   // return catdImage
@@ -30,3 +29,10 @@ var iteratedZones = zones.iterate(iterator, ee.ImageCollection([]))
 print(iteratedZones)
 var iteratedImage = ee.ImageCollection(iteratedZones).median()
 displayClassification(iteratedImage, 'iteratedImage')
+
+Export.image.toDrive({
+  image: iteratedImage,
+  scale: 30,
+  region: geometry,
+  maxPixels: 1e13
+})
