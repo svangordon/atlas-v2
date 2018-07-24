@@ -50,8 +50,8 @@ function displayClassification(classificationImage, layerName) {
   Returns:
     ee.FeatureCollection (GeometryCollection)
 */
-function getZone(boundaryGeometry, projectionImage) {
-  //getZoneBoundaries
+function getZones(boundaryGeometry, projectionImage) {
+  //getZonesBoundaries
   var zoneSize = 56000
   projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
   print(projectionImage)
@@ -83,7 +83,7 @@ function getZone(boundaryGeometry, projectionImage) {
 
 */
 function getSamplingPoints(zoneGeometry, projectionImage) {
-  // getLabelLocations
+  zoneGeometry = ee.Feature(zoneGeometry).geometry()
   projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
   var projection = projectionImage.projection()
   return ee.Image
@@ -203,14 +203,14 @@ function sampleCollection(basemap, labels, samplingGeometry, samplingScale) {
   labels = ee.Image(labels)
   samplingGeometry = ee.FeatureCollection(samplingGeometry)
 
-  var data = basemap.addBands(labels)
+  return basemap.addBands(labels)
     .addBands(ee.Image.pixelLonLat())
     .sampleRegions({
       collection: samplingGeometry,
       scale: samplingScale
     })
     .map(toPoint)
-  return data.set('band_order', ee.Feature(data.first()).propertyNames())
+  // return data.set('band_order', ee.Feature(data.first()).propertyNames())
 }
 
 /*
@@ -273,43 +273,26 @@ function ClassifyZone(classificationZone) {
 
 var geometry = geometry || ee.Geometry.Point(-4.285, 11.243)
 
-var zone = getZone(geometry)
+var zone = getZones(geometry)
 Map.addLayer(zone)
 Map.addLayer(geometry, {}, 'geometry')
 print(zone.geometry())
-Map.addLayer(getSamplingPoints(zone))
+// Map.addLayer(getSamplingPoints(zone))
+
 
 var classifiedImage = ClassifyZone(zone)
-
 displayClassification(classifiedImage)
 
+// var country = ee.FeatureCollection('users/svangordon/ecowas')
+//   .filter(ee.Filter.eq('NAME', 'Burkina Faso'))
+// var zones = getZones(country)
+// Map.addLayer(zones)
+// var classifiedZones = zones.map(ClassifyZone)
+// Map.addLayer(classifiedZones, {}, 'classifiedZones')
 //
-// var landsat7 = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
-// // var octoberFilter = getTimeFilter('2016-09-15', '2016-11-15')
-// var landsat7Image = getLandsatImage(zone, 2016, landsat7)
-// displayLandsat7SR(landsat7Image)
 //
-// /*
-//   Test Sampling Scripts
-// */
-// var atlas_2013 = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
-// // Test samplingPoints
-// var samplingPoints = getSamplingPoints(zone)
-// var inputData = sampleCollection(landsat7Image, atlas_2013, samplingPoints)
-// print(inputData)
-// // print(ee.Feature(inputData.first()).propertyNames())
-// /*
-//   Test training a classifier
-// */
-// var ls7Bands = ['B1', 'B2', 'B3', 'B4', 'B5', 'B7']
-// var trainingResult = trainClassifier(inputData, ls7Bands)
-// print('trainingResult', trainingResult)
-//
-// var classifier = trainingResult.get('classifier')
-// classifier = ee.Classifier(classifier)
-//
-// /*
-//   Classify image
-// */
-// var classifiedImage = landsat7Image.classify(classifier)
-// displayClassification(classifiedImage)
+// var labelImage = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
+// var foo = zones.map(function(zone) {
+//   return getSamplingPoints(zone, labelImage)
+// })
+// Map.addLayer(foo, {}, 'sampling points')
