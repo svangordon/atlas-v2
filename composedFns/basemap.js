@@ -83,7 +83,7 @@ function getZones(boundaryGeometry, projectionImage) {
 
 */
 function getSamplingPoints(zoneGeometry, projectionImage) {
-  zoneGeometry = ee.FeatureCollection(zoneGeometry).flatten().geometry()
+  zoneGeometry = ee.FeatureCollection(zoneGeometry).geometry()
   projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
   var projection = projectionImage.projection()
   return ee.Image
@@ -252,7 +252,8 @@ function ClassifyZone(classificationZone) {
   // Set training and classification images
   var trainingImage = getLandsatImage(zone, trainingYear, trainingImageCollection);
   var classificationImage = getLandsatImage(zone, classificationYear, trainingImageCollection);
-
+  Map.addLayer(classificationZone)
+  print('classificationZone', classificationZone)
   // Create points that we will sample training image at. If using non-Atlas
   // data, change this to randomPoints
   var samplingPoints = getSamplingPoints(classificationZone, labelImage)
