@@ -60,7 +60,7 @@ function getZone(boundaryGeometry, projectionImage) {
   return ee.Image.random()
     .multiply(10000000)
     .toInt()
-    .aside(function(im) {Map.addLayer(im)})
+    // .aside(function(im) {Map.addLayer(im)})
     .reduceToVectors({
       crs: projection,
       scale: zoneSize,
@@ -215,6 +215,7 @@ function sampleCollection(basemap, labels, samplingGeometry, samplingScale) {
 */
 function getClassifier(inputData, trainingBands) {
   var trainingSize = 0.7
+  inputData = inputData.randomColumn()
   var trainingData = inputData.filter(ee.Filter.lt('random', trainingSize))
   var testingData = inputData.filter(ee.Filter.gte('random', trainingSize))
   var classifier = ee.Classifier.randomForest(20)
