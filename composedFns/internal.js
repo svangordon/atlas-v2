@@ -136,8 +136,9 @@ function classifyZone(classificationZone) {
   var trainingBands = ls7Bands
   var classBand = 'b1'
 
-  var trainingImageCollection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
-  // var trainingImageCollection = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
+  var landsat7Collection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
+  var landsat8Collection = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
+  var trainingImageCollection = landsat7Collection;
 
   // Set training and classification images
   var trainingImage = getLandsatImage(classificationZone, trainingYear, trainingImageCollection);
@@ -145,46 +146,27 @@ function classifyZone(classificationZone) {
 
   // Create points that we will sample training image at. If using non-Atlas
   // data, change this to randomPoints
-  var trainingInputs = getTrainingInputs(classificationZone, labelImage)
-  var inputData = getTrainingInputs(trainingImage, labelImage, trainingInputs)
-  var inputDataSize = ee.FeatureCollection(inputData).size()
-  return inputData
+  var labelLocations = getLabelLocations(classificationZone, labelImage)
+  var inputData = getTrainingInputs(trainingImage, labelImage, labelLocations)
+
   // Uses a random forest by default. Change trainAlgorithm function if you
   // would like to adjust that.
   var trainingResult = trainAlgorithm(inputData, trainingBands)
   var algorithm = trainingResult.get('algorithm')
+  var accuracy = ee.Image(trainingResult.get('accuracy'))
   algorithm = ee.Classifier(algorithm)
   var classifiedImage = trainingImage.classify(algorithm)
-
-  // Export.image.toDrive({
-  //   image: classifiedImage,
-  //   folder: 'classifiedLulc',
-  //   region: classificationZone,
-  //   fileNamePrefix: 'atlasV2_' + classificationYear,
-  //   scale: 30,
-  //   description: 'atlasV2_' + classificationYear,
-  //   maxPixels: 1e13
-  // });
+    .set('accuracy', accuracy)
 
   return classifiedImage
 }
 
-/*
-  Test basemap scripts:
-*/
-
+exports.classifyZone = classifyZone;
+exports.getZonesBoundaries = getZonesBoundaries;
 // Draw your own geometry
 // var geometry = geometry || ee.Geometry.Point(-4.285, 11.243)
 
-var zones = getZonesBoundaries(geometry)
-Map.addLayer(zones)
-// Map.addLayer(geometry, {}, 'geometry')
-print(zones)
 
-var classifiedZones = zones.map(classifyZone)
-print(classifiedZones)
-// var classifiedImage = ee.ImageCollection(classifiedZones).median()
-// displayClassification(classifiedImage, 'classifiedZones')
 
 
 
