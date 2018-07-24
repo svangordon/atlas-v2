@@ -103,7 +103,8 @@ landsatData = landsatImage
   .aside(function(collection) {
     print(collection)
   })
-  .map(toPoint)
-  .aside(function(collection) {
-    print(collection)
+  .sampleRegions({
+    collection: samplingPoints,
+    scale: landsatImage.projection().nominalScale()
   })
+  .map(toPoint)

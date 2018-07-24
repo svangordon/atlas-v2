@@ -6,12 +6,14 @@ var getZonesBoundaries = internalFunctions.getZonesBoundaries
 
 function iterator(currentZone, accum) {
   var classifiedZone = ee.Image(classifyZone(currentZone))
-  // var catdImage = ee.Image.cat(accum, classifiedZone)
-  // return catdImage
-  // return classifiedZone
   var output = ee.ImageCollection(accum).merge(ee.ImageCollection(classifiedZone))
   return output
 }
+
+// Load Burkina Faso
+var ecowas = ee.FeatureCollection('users/VOTRE_COMPTE_ICI/ecowas')
+var geometry = ecowas.filter(ee.Filter.eq('NAME', 'Burkina Faso'))
+
 var zones = getZonesBoundaries(geometry)
 Map.addLayer(zones)
 // Map.addLayer(geometry, {}, 'geometry')
@@ -19,8 +21,6 @@ print(zones)
 
 var classifiedZones = zones.map(classifyZone)
 print(classifiedZones)
-var classifiedImage = ee.ImageCollection(classifiedZones).median()
-displayClassification(classifiedImage, 'classifiedZones')
 
 var accuracy = ee.ImageCollection(classifiedZones).aggregate_mean('accuracy')
 print('accuracy', accuracy)
@@ -34,5 +34,7 @@ Export.image.toDrive({
   image: iteratedImage,
   scale: 30,
   region: geometry,
-  maxPixels: 1e13
+  maxPixels: 1e13,
+  description: 'classificationExport',
+  folder: 'eeExports'
 })

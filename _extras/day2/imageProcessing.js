@@ -52,7 +52,7 @@ Map.addLayer(aoi, {}, 'AOI')
 var filteredImages = ls8
   .filterBounds(aoi)
 
-// Your image collection should contain <<NUMBER>>
+// Your image collection should contain 341
 print('After filtering bounds, collection size', filteredImages.size())
 print('Expected Size:', 341)
 
