@@ -83,7 +83,7 @@ function getZones(boundaryGeometry, projectionImage) {
 
 */
 function getSamplingPoints(zoneGeometry, projectionImage) {
-  zoneGeometry = ee.Feature(zoneGeometry).geometry()
+  zoneGeometry = ee.FeatureCollection(zoneGeometry).flatten().geometry()
   projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
   var projection = projectionImage.projection()
   return ee.Image
@@ -235,37 +235,37 @@ function trainClassifier(inputData, trainingBands) {
 
 */
 function ClassifyZone(classificationZone) {
-    // Label image: change label image here
-    var labelImage = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
+  // Label image: change label image here
+  var labelImage = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
 
-    // Training and classification years
-    var trainingYear = 2013
-    var classificationYear = 2016
+  // Training and classification years
+  var trainingYear = 2013
+  var classificationYear = 2016
 
-    // Training bands: the names of the bands that we will classify on
-    var trainingBands = ['B1', 'B2', 'B3', 'B4', 'B5', 'B7']
-    var classBand = 'b1'
+  // Training bands: the names of the bands that we will classify on
+  var trainingBands = ['B1', 'B2', 'B3', 'B4', 'B5', 'B7']
+  var classBand = 'b1'
 
-    var trainingImageCollection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
-    // var trainingImageCollection = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
+  var trainingImageCollection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
+  // var trainingImageCollection = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
 
-    // Set training and classification images
-    var trainingImage = getLandsatImage(zone, trainingYear, trainingImageCollection);
-    var classificationImage = getLandsatImage(zone, classificationYear, trainingImageCollection);
+  // Set training and classification images
+  var trainingImage = getLandsatImage(zone, trainingYear, trainingImageCollection);
+  var classificationImage = getLandsatImage(zone, classificationYear, trainingImageCollection);
 
-    // Create points that we will sample training image at. If using non-Atlas
-    // data, change this to randomPoints
-    var samplingPoints = getSamplingPoints(classificationZone, labelImage)
+  // Create points that we will sample training image at. If using non-Atlas
+  // data, change this to randomPoints
+  var samplingPoints = getSamplingPoints(classificationZone, labelImage)
 
-    var inputData = sampleCollection(trainingImage, labelImage, samplingPoints)
+  var inputData = sampleCollection(trainingImage, labelImage, samplingPoints)
 
-    // Uses a random forest by default. Change trainClassifier function if you
-    // would like to adjust that.
-    var trainingResult = trainClassifier(inputData, trainingBands)
-    var classifier = trainingResult.get('classifier')
-    classifier = ee.Classifier(classifier)
-    return trainingImage.classify(classifier)
-  }
+  // Uses a random forest by default. Change trainClassifier function if you
+  // would like to adjust that.
+  var trainingResult = trainClassifier(inputData, trainingBands)
+  var classifier = trainingResult.get('classifier')
+  classifier = ee.Classifier(classifier)
+  return trainingImage.classify(classifier)
+}
 
 /*
   Test basemap scripts:
@@ -275,8 +275,8 @@ var geometry = geometry || ee.Geometry.Point(-4.285, 11.243)
 
 var zone = getZones(geometry)
 Map.addLayer(zone)
-Map.addLayer(geometry, {}, 'geometry')
-print(zone.geometry())
+// Map.addLayer(geometry, {}, 'geometry')
+print(zone)
 // Map.addLayer(getSamplingPoints(zone))
 
 
