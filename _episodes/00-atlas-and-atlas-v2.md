@@ -19,10 +19,6 @@ keypoints:
 
 The Atlas and Atlas V2 datasets are land cover maps of the West African Sahel. In this lesson, we will discuss these datasets, how they were produced, how they are related, and how you might use them in your map.
 
-## Description of Datasets
-
-We are going to be talking to you about the Atlas and Atlas V2 datasets.
-
 ## Atlas Dataset
 
 <img src="../fig/01-atlas-2013.png" border="10" >
@@ -32,7 +28,7 @@ The [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usg
 
 The Atlas dataset is available for download from the USGS website. [West Africa Land Use Land Cover Time Series Atlas (Atlas)](https://eros.usgs.gov/westafrica/)
 
-### Atlas V2 Dataset
+## Atlas V2 Dataset
 <img src="../fig/01-atlas-v2-2016.png" border="10" >
 _2016 Atlas V2 Classification_
 
@@ -41,6 +37,10 @@ The Atlas V2 is a land cover dataset produced by Mollie Van Gordon at the Univer
 Currently, the V2 team has produced a 30m land cover dataset using Landsat images for every year between 2000 and 2016. This dataset is currently available on Google Earth Engine. The process for creating these datasets is flexible. Different datasets can be used in place of both Landsat and Atlas. For example, researchers could hand classify a small area of interest to produce a land cover map at an even higher accuracy.
 
 Currently, not all of the region covered by Atlas is classified in Atlas V2. The southern coast of West Africa has been excluded, due to issues with finding cloud-free images. Southern Chad has also not been classified, due to issues with scale (in Atlas, Chad is at 4km resolution). Both of these omissions are due to time constraints: there's no reason that we couldn't classify the entire region, and in fact we're eager to. We just haven't had time yet!
+
+## Classification Methodology
+
+<img src="../fig/methodology-schematic.jpg" border="10" >
 
 ## Viewing Datasets
 We will talk more soon about how to view these datasets. For now, let's just look at them in Earth Engine.

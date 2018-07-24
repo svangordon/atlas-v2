@@ -50,7 +50,7 @@ function displayClassification(classificationImage, layerName) {
   Returns:
     ee.FeatureCollection (GeometryCollection)
 */
-function getZones(boundaryGeometry, projectionImage) {
+function getZonesBoundaries(boundaryGeometry, projectionImage) {
   //getZonesBoundaries
   var zoneSize = 56000
   projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
@@ -210,7 +210,6 @@ function sampleCollection(basemap, labels, samplingGeometry, samplingScale) {
       scale: samplingScale
     })
     .map(toPoint)
-  // return data.set('band_order', ee.Feature(data.first()).propertyNames())
 }
 
 /*
@@ -232,9 +231,9 @@ function trainClassifier(inputData, trainingBands) {
 }
 
 /*
-
+  Use this function to map over zones.
 */
-function ClassifyZone(classificationZone) {
+function classifyZone(classificationZone) {
   classificationZone = ee.FeatureCollection(classificationZone).geometry()
   // Label image: change label image here
   var labelImage = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
@@ -288,24 +287,29 @@ function ClassifyZone(classificationZone) {
   Test basemap scripts:
 */
 
-var geometry = geometry || ee.Geometry.Point(-4.285, 11.243)
+// Draw your own geometry
+// var geometry = geometry || ee.Geometry.Point(-4.285, 11.243)
 
-var zone = getZones(geometry)
+var zones = getZones(geometry)
 Map.addLayer(zone)
 // Map.addLayer(geometry, {}, 'geometry')
-print(zone)
+print(zones)
 // Map.addLayer(getSamplingPoints(zone))
 
 
-var classifiedImage = ClassifyZone(zone)
+var classifiedImage = classifyZone(zone)
 displayClassification(classifiedImage)
 
-var country = ee.FeatureCollection('users/svangordon/ecowas')
-  .filter(ee.Filter.eq('NAME', 'Burkina Faso'))
-var zones = getZones(country.geometry())
-Map.addLayer(zones)
-var classifiedZones = zones.map(ClassifyZone)
-Map.addLayer(classifiedZones, {}, 'classifiedZones')
+var classifiedZones = zones.map(classifyZone)
+
+Map.addLayer(classifiedZones)
+
+// var country = ee.FeatureCollection('users/svangordon/ecowas')
+//   .filter(ee.Filter.eq('NAME', 'Burkina Faso'))
+// var zones = getZones(country.geometry())
+// Map.addLayer(zones)
+// var classifiedZones = zones.map(classifyZone)
+// Map.addLayer(classifiedZones, {}, 'classifiedZones')
 //
 //
 // var labelImage = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
