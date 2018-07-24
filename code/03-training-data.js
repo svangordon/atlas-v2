@@ -49,7 +49,7 @@ function maskLandsat(image) {
 
   return image
     .updateMask(mask)
-    .select(['B1', 'B2', 'B3', 'B4', 'B5', 'B7'])
+    .select(['B.+'])
 }
 
 var landsatImage = lsCollection.map(maskLandsat)
