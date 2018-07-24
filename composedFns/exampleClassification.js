@@ -1,14 +1,14 @@
-var geometry = /* color: #0b4a8b */ee.Geometry.Polygon(
-        [[[-0.538330078125, 14.519780046326085],
-          [0.50537109375, 14.477234210156519],
-          [0.50537109375, 14.987239525774244],
-          [-0.472412109375, 15.061514891072227]]]);
+// var geometry = /* color: #0b4a8b */ee.Geometry.Polygon(
+//         [[[-0.05494581838740942, 14.461468759652071],
+//           [0.6012522759381227, 14.365700752462468],
+//           [0.6012455827112717, 14.875706068039074],
+//           [-0.03270576072179665, 14.907523636434911]]]);
 
-var externalFunctions = require('users/svangordon/atelier:externalFunctions')
-var displayClassification = externalFunctions.displayClassification
-var internalFunctions = require('users/svangordon/atelier:internalFunctions')
-var classifyZone = internalFunctions.classifyZone
-var getZonesBoundaries = internalFunctions.getZonesBoundaries
+var classificationTools = require('users/svangordon/atelier:classificationTools')
+// var classificationTools = require('users/svangordon/atelier:classificationTools')
+var displayClassification = classificationTools.displayClassification
+var classifyZone = classificationTools.classifyZone
+var getZonesBoundaries = classificationTools.getZonesBoundaries
 
 var zones = getZonesBoundaries(geometry)
 Map.addLayer(zones)
