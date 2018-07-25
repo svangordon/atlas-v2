@@ -1,15 +1,14 @@
 ---
-title: "classifyZones Overview"
-teaching: 0
-exercises: 0
+title: "Overview of classifyZones"
+teaching: 10
+exercises: 10
 questions:
 - How do we make our own choices for `classifyZones`?
 objectives:
 - Learn how to make our own version of `classifyZones`
 keypoints:
 - We must save our own version of `classifyZones`
-- We make changes in the classifyZones function to use different years, different
-label images, and so forth.
+- We make changes in the classifyZones function to use different years, different label images, and so forth.
 ---
 
 ## Classify Zones
@@ -93,7 +92,7 @@ We now pair our training basemap with the label image, and sample it at the labe
 ~~~
 {:. .source .language-javascript}
 
-Now that we have created our `inputData`, we will train our algorithm. By default, this uses a random forest with 20 trees per class. You can change the algorithm by changing the `trainAlgorithm` function. The `trainAlgorithm` function returns an image, where the image is the result of the algorithm's classification. 
+Now that we have created our `inputData`, we will train our algorithm. By default, this uses a random forest with 20 trees per class. You can change the algorithm by changing the `trainAlgorithm` function. The `trainAlgorithm` function returns an image, where the image is the result of the algorithm's classification.
 ~~~
   // Uses a random forest by default. Change trainAlgorithm function if you
   // would like to adjust that.
