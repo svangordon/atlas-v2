@@ -205,23 +205,26 @@ print('pwl ag hist', pixelsWithLabels.aggregate_histogram('classification'))
 // var pixelGeometry = pixels.geometry().dissolve(5)
 // Map.addLayer(pixelGeometry, {color: 'green'}, 'pixelGeometry')
 
-var pixelImage = pixelsWithLabels.reduceToImage(['classification'], ee.Reducer.min())
+var pixelImage = pixelsWithLabels.reduceToImage(['classification'], ee.Reducer.first())
   .toInt()
   .clip(geometry)
-
-var pixelImageReproj = pixelImage
-  .changeProj(pixelImage.projection(), labelProjection)
+print('labelProjection', labelProjection)
+pixelImage = pixelImage//.changeProj(pixelImage.projection(), labelProjection)
+  .reproject(labelProjection, null, 2000)
+// var pixelImageReproj = pixelImage
+//   .changeProj(pixelImage.projection(), labelProjection)
   // .reproject({
   //   crs: labelProjection,
   //   scale: 2000
   // })
 print('pixelImage', pixelImage)
-print('pixelImageReproj', pixelImageReproj)
-print('pixelImageReproj proj', pixelImageReproj.projection())
+print('pixelImage proj', pixelImage.projection())
+// print('pixelImageReproj', pixelImageReproj)
+// print('pixelImageReproj proj', pixelImageReproj.projection())
 displayClassification(atlasV2.clip(geometry), 'atlasV2_2013')
 displayClassification(atlas_2013.clip(geometry), 'atlas_2013')
 displayClassification(pixelImage.clip(geometry), 'pixelImage')
-displayClassification(pixelImageReproj.clip(geometry), 'pixelImageReproj')
+// displayClassification(pixelImageReproj.clip(geometry), 'pixelImageReproj')
 
 // Get statistics for the two images
 
@@ -273,18 +276,26 @@ function displayHistogram(classAreas, title) {
 Map.addLayer(pixels, {color: 'green'}, 'pixels')
 var atlasAreas = getImageHistogram(atlas_2013, geometry, 2000, 4)
 // I'm not sure why this wouldn't be exactly the same, but
-var reprojV2Areas = getImageHistogram(pixelImageReproj, geometry, 2000, 4)
-var noReprojV2Areas = getImageHistogram(pixelImage, geometry, 2000, 4)
+// var reprojV2Areas = getImageHistogram(pixelImageReproj, geometry, 2000, 4)
+var pixelV2Areas = getImageHistogram(pixelImage, geometry, 2000, 4)
 var v2Areas = pixelsWithLabels.aggregate_histogram('classification')
 v2Areas = ee.Dictionary(v2Areas).map(function(key, value) {
   return ee.Number(value).multiply(4)
 })
 v2Areas = ee.Feature(null, v2Areas)
-print('pixel image projection', pixelImage.projection())
+// print('pixel image projection', pixelImage.projection())
 
 print('atlasAreas', atlasAreas)
 print('v2Areas', v2Areas)
-print('reprojV2Areas', reprojV2Areas)
+print('pixelV2Areas', pixelV2Areas)
+print('otherPxlV2', pixelImage.reduceRegion({
+      reducer: ee.Reducer.frequencyHistogram(),
+      geometry: geometry,
+      maxPixels: 1e13,
+      // scale: scale,
+      // tileScale: 16,
+      // crs: image.projection()
+    }))
 
 var atlasSum = atlasAreas.toDictionary().values().reduce(ee.Reducer.sum())
 var v2Sum = v2Areas.toDictionary().values().reduce(ee.Reducer.sum())
@@ -307,5 +318,5 @@ print('difference', ee.Number(v2Sum).subtract(atlasSum))
 
 displayHistogram(atlasAreas, 'atlasAreas')
 displayHistogram(v2Areas, 'v2Areas')
-displayHistogram(reprojV2Areas, 'reprojV2Areas')
+displayHistogram(pixelV2Areas, 'pixelV2Areas')
 // displayHistogram(noReprojV2Areas, 'noReprojV2Areas')
