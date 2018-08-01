@@ -110,7 +110,14 @@ function TimeFilter(startDateList, endDateList, yearsList) {
   startDateList = startDateList.cat([0])
   endDateList = endDateList.cat([0])
 
-  var startMonth = startDateList
+  var startMonth = startDateList.get(0)
+  var startDay = startDateList.get(1)
+  var startYearOffset = startDateList.get(2)
+
+  var endMonth = endDateList.get(0)
+  var endDay = endDateList.get(1)
+  var endYearOffset = endDateList.get(2)
+
   // datesArray = ee.List(datesArray || [9, 15, 11, 15])
   // var startMonth = datesArray.get(0)
   // var startDay = datesArray.get(1)
@@ -118,15 +125,17 @@ function TimeFilter(startDateList, endDateList, yearsList) {
   // var endDay = datesArray.get(3)
   // startDate = ee.Date(startDate)
   // endDate = ee.Date(endDate)
-  function getTimeFilter(year) {
-    var startDate = ee.Date.fromYMD(year, startMonth)
+  function getTimeFilter(originYear) {
+    var dateFilters = yearsList.map(function(filterYearOffset) {
+      var startDate = ee.Date.fromYMD(ee.Number(originYear).add(filterYearOffset).add(startYearOffset), startMonth, startDay)
+      var endDate = ee.Date.fromYMD(ee.Number(originYear).add(filterYearOffset).add(endYearOffset), endMonth, endDay)
+      return ee.Filter.date(startDate, endDate)
+    })
+    return dateFilters.slice(1)
+      .iterate(function(filter, accum) {
+        return ee.Filter.or(accum, filter)
+      }, dateFilters.get(0))
   }
-  var dateFilters = years.map(function(year) {
-    return ee.Filter.date(startDate.advance(year, 'year'), endDate.advance(year, 'year'))
-  })
-  return dateFilters.slice(1)
-  .iterate(function(filter, accum) {
-    return ee.Filter.or(accum, filter)
-  }, dateFilters.get(0))
+  return getTimeFilter
 }
-exports.getTimeFilter = getTimeFilter
+exports.TimeFilter = TimeFilter
