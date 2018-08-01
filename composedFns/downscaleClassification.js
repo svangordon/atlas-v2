@@ -179,9 +179,12 @@ var pixelsWithLabels = pixels.map(function(pixel) {
 })
 print(pixelsWithLabels.first())
 
+// var pixelGeometry = pixels.geometry().dissolve(5)
+// Map.addLayer(pixelGeometry, {color: 'green'}, 'pixelGeometry')
+
 var pixelImage = pixelsWithLabels.reduceToImage(['classification'], ee.Reducer.min())
   .toInt()
-  // .clip(geometry)
+  .clip(geometry)
 
 displayClassification(atlasV2.clip(geometry), 'atlasV2_2013')
 displayClassification(atlas_2013.clip(geometry), 'atlas_2013')
@@ -189,7 +192,9 @@ displayClassification(pixelImage.clip(geometry), 'pixelImage')
 
 // Get statistics for the two images
 
-
+// print('crs', atlas_2000.projection())
+// print('crs', atlas_2000.projection().transform())
+// print('crs', atlas_2000.projection().get(''))
 function getImageHistogram(image, geometry, scale, pixelArea) {
   var pixelCounts = image
     .rename('classification')
@@ -199,7 +204,7 @@ function getImageHistogram(image, geometry, scale, pixelArea) {
       maxPixels: 1e13,
       scale: scale,
       tileScale: 16,
-      // crs: atlas_2000.projection().crs()
+      crs: atlas_2000.projection()
     })
     .get('classification')
   var classAreas = ee.Dictionary(pixelCounts)
