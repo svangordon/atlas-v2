@@ -1,92 +1,18 @@
 var cloud_masks = require('users/fitoprincipe/geetools:cloud_masks');
 var maskLandsat = cloud_masks.landsatSR()
 
-var labelProjection =  ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km').projection()
+var toolPath = 'users/svangordon/default:classificationTools'
+var classificationTools = require(toolPath)
+var displayClassification = classificationTools.displayClassification
+var getAtlasGeometries = classificationTools.getAtlasGeometries
+var toPoint = classificationTools.toPoint
+var TimeFilter = classificationTools.TimeFilter
 
-function displayClassification(classificationImage, layerName) {
-  // Cast classificationImage to Image
-  classificationImage = ee.Image(classificationImage)
 
-  var atlasPalette = [
-    "8400a8", // Forest / Forêt
-    "8bad8b", // Savanna / Savane
-    "000080", // Wetland - floodplain / Prairie marécageuse - vallée inondable
-    "ffcc99", // Steppe / Steppe
-    "808000", // Plantation / Plantation
-    "33cccc", // Mangrove / Mangrove
-    "ffff96", // Agriculture / Zone de culture
-    "3366ff", // Water bodies / Plans d'eau
-    "ff99cc", // Sandy area / surfaces sableuses
-    "969696", // Rocky land / Terrains rocheux
-    "a87000", // Bare soil / Sols dénudés
-    "ff0000", // Settlements / Habitations
-    "ccff66", // Irrigated agriculture / Cultures irriguées
-    "a95ce6", // Gallery forest and riparian forest / Forêt galerie et formation ripicole
-    "d296e6", // Degraded forest / Forêt dégradée
-    "a83800", // Bowe / Bowé
-    "f5a27a", // Thicket / Fourré
-    "ebc961", // Agriculture in shallows and recession / Cultures des bas-fonds et de décrue
-    "28734b", // Woodland / Forêt claire
-    "ebdf73", // Cropland and fallow with oil palms / Cultures et jachère sous palmier à huile
-    "beffa6", // Swamp forest / Forêt marécageuse
-    "a6c28c", // Sahelian short grass savanna / Savane sahélienne
-    "0a9696", // Herbaceous savanna / Savane herbacée
-    "749373", // Shrubland / Zone arbustive
-    "505050", // Open mine / Carrière
-    "FFFFFF"  // Cloud / Nuage
-  ]
-  var atlasClasses = [1,2,3,4,6,7,8,9,10,11,12,13,14,15,21,22,23,24,25,27,28,29,31,32,78,99]
-  var remappedImage = classificationImage.remap(atlasClasses, ee.List.sequence(1, 26))
-  classificationImage = classificationImage.addBands(remappedImage)
-  Map.addLayer(classificationImage, {min:1, max:26, palette: atlasPalette, bands:'remapped'}, layerName)
-}
+var labelImage =  ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
+var labelProjection =  labelImage.projection()
 
-/*
-  getLabelLocations
-    Create a collection of ~~center~~points at a given projection. Used for creating
-  the collection from which we will sample our basemap.
 
-  Parameters:
-    - zoneGeometry (ee.Geometry): The geometry within which we will create our collection of points.
-    - [projectionImage] (ee.Image, default: Atlas 2013): The image whose projection
-    we will use for the collection of points.
-  Returns:
-    ee.FeatureCollection (GeometryCollection)
-
-*/
-function getLabelLocations(zoneGeometry, labelProjection) {
-  labelProjection = labelProjection.projection()
-  zoneGeometry = ee.FeatureCollection(zoneGeometry).geometry()
-  return ee.Image
-    .random()
-    .multiply(100000)
-    .toInt()
-    .reduceToVectors({
-      crs: labelProjection,
-      geometry: zoneGeometry,
-      // scale: labelProjection.nominalScale(),
-      geometryInNativeProjection: true,
-      geometryType: 'centroid'
-    })
-    // .map(function(feature) {
-    //   var centroid = feature.centroid(5, labelProjection)
-    //   return centroid
-    // })
-}
-exports.getLabelLocations = getLabelLocations
-/*
-  toPoint
-    Takes a feature with `longitude` and `latitude` properties, strips those properties,
-  and converts them into a geometry. Used so that features have geometries after a
-  `.sampleRegions` call.
-*/
-function toPoint(feature) {
-  feature = ee.Feature(feature)
-  return ee.Feature(
-    ee.Geometry.Point([feature.get('longitude'), feature.get('latitude')]),
-    feature.toDictionary().remove(['longitude', 'latitude']))
-}
-exports.toPoint = toPoint
 
 function getTrainingInputs(basemap, labels, samplingGeometry, samplingScale) {
   // Use the or operator (which is ||) to set a default value for sampling scale
@@ -160,30 +86,6 @@ function getZonesBoundaries(boundaryGeometry, projectionImage) {
 }
 exports.getZonesBoundaries = getZonesBoundaries
 
-/*
-  getTimeFilter
-    Gets an `or` filter from startDate to endDate, for each of the year in the years
-  relative to the start and end dates.
-  Parameters:
-    - startDate (ee.String|String)
-    - endDate (ee.String|String)
-    - years (List, default: [-1, 0, 1]): List of years, relative to the start and end dates,
-  to create filters for.
-*/
-function getTimeFilter(startDate, endDate, years) {
-  // ditto
-  years = ee.List(years || [-1, 0, 1])
-  startDate = ee.Date(startDate)
-  endDate = ee.Date(endDate)
-  var dateFilters = years.map(function(year) {
-    return ee.Filter.date(startDate.advance(year, 'year'), endDate.advance(year, 'year'))
-  })
-  return dateFilters.slice(1)
-  .iterate(function(filter, accum) {
-    return ee.Filter.or(accum, filter)
-  }, dateFilters.get(0))
-}
-exports.getTimeFilter = getTimeFilter
 
 // /*
 //   maskLandsat
@@ -264,7 +166,7 @@ function classifyZone(classificationZone) {
 
   // Create points that we will sample training image at. If using non-Atlas
   // data, change this to randomPoints
-  var labelLocations = getLabelLocations(classificationZone.buffer(56000), labelImage)
+  var labelLocations = getAtlasGeometries(classificationZone.buffer(56000), 'centroid', labelImage)
   var inputData = getTrainingInputs(trainingImage, labelImage, labelLocations)
     .filter(ee.Filter.notNull(trainingBands))
 
@@ -295,8 +197,6 @@ function classifyCountry(currentZone, accum) {
   return output
 }
 
-
-
 // Load Country of Interest
 var ecowas = ee.FeatureCollection('users/svangordon/ecowas')
 print(ecowas.aggregate_histogram('NAME'))
@@ -306,28 +206,12 @@ var geometry = ecowas.filter(ee.Filter.eq('NAME', 'Burkina Faso'))
 
 var atlas_2000 = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
 
-var centroids = getLabelLocations(geometry, atlas_2000)
+var centroids = getAtlasGeometries(geometry, 'centroid', atlas_2000)
 print('centroids', centroids.geometry().projection())
 print('labelProjection', labelProjection)
 
 
-function getPixels(zoneGeometry, projectionImage) {
-  zoneGeometry = ee.FeatureCollection(zoneGeometry).geometry()
-  projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
-  var projection = projectionImage.projection()
-  return ee.Image
-    .random()
-    .multiply(100000)
-    .toInt()
-    .reduceToVectors({
-      crs: projection,
-      geometry: zoneGeometry,
-      scale: projection.nominalScale(),
-      geometryInNativeProjection: true
-    })
-}
-
-var pixels = getPixels(geometry, atlas_2000)
+var pixels = getAtlasGeometries(geometry, 'polygon', atlas_2000)
 
 // var classifiedPixels = pixels.map(classifyZone)
 

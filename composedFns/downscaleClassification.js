@@ -62,40 +62,59 @@ function getPixels(zoneGeometry, projectionImage) {
     })
 }
 
-
-/*
-  getLabelLocations
-    Create a collection of ~~center~~points at a given projection. Used for creating
-  the collection from which we will sample our basemap.
-
-  Parameters:
-    - zoneGeometry (ee.Geometry): The geometry within which we will create our collection of points.
-    - [projectionImage] (ee.Image, default: Atlas 2013): The image whose projection
-    we will use for the collection of points.
-  Returns:
-    ee.FeatureCollection (GeometryCollection)
-
-*/
-function getLabelLocations(zoneGeometry, projectionImage) {
+function getAtlasGeometries(zoneGeometry, geometryType, labelProjection) {
+  labelProjection = labelProjection.projection()
   zoneGeometry = ee.FeatureCollection(zoneGeometry).geometry()
-  projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
-  var projection = projectionImage.projection()
   return ee.Image
     .random()
     .multiply(100000)
     .toInt()
     .reduceToVectors({
-      crs: projection,
+      crs: labelProjection,
       geometry: zoneGeometry,
-      scale: projection.nominalScale(),
-      geometryInNativeProjection: true
+      // scale: labelProjection.nominalScale(),
+      geometryInNativeProjection: true,
+      geometryType: geometryType
     })
-    .map(function(feature) {
-      var centroid = feature.centroid(5)
-      return centroid
-    })
+    // .map(function(feature) {
+    //   var centroid = feature.centroid(5, labelProjection)
+    //   return centroid
+    // })
 }
-exports.getLabelLocations = getLabelLocations
+
+// /*
+//   getLabelLocations
+//     Create a collection of ~~center~~points at a given projection. Used for creating
+//   the collection from which we will sample our basemap.
+//
+//   Parameters:
+//     - zoneGeometry (ee.Geometry): The geometry within which we will create our collection of points.
+//     - [projectionImage] (ee.Image, default: Atlas 2013): The image whose projection
+//     we will use for the collection of points.
+//   Returns:
+//     ee.FeatureCollection (GeometryCollection)
+//
+// */
+// function getLabelLocations(zoneGeometry, projectionImage) {
+//   zoneGeometry = ee.FeatureCollection(zoneGeometry).geometry()
+//   projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
+//   var projection = projectionImage.projection()
+//   return ee.Image
+//     .random()
+//     .multiply(100000)
+//     .toInt()
+//     .reduceToVectors({
+//       crs: projection,
+//       geometry: zoneGeometry,
+//       scale: projection.nominalScale(),
+//       geometryInNativeProjection: true
+//     })
+//     .map(function(feature) {
+//       var centroid = feature.centroid(5)
+//       return centroid
+//     })
+// }
+// exports.getLabelLocations = getLabelLocations
 /*
   toPoint
     Takes a feature with `longitude` and `latitude` properties, strips those properties,
@@ -111,38 +130,38 @@ function toPoint(feature) {
 exports.toPoint = toPoint
 
 
-/*
-  getZonesBoundaries:
-    Creates a collection of zoneSize * zoneSize geometries in a given projection,
-   which will use as the areas in which we performa a classification. Returns as
-   many geometries as cover a given zone.
-
-  Parameters:
-    - boundaryGeometry (ee.Geometry): The geometry to which we will limit ourselves.
-    - [zoneSize] (Number, default: 56000): Size, in meters, of each side of the classification zone.
-    - [projectionImage] (ee.Image, default: Atlas 2013)]: The image whose projection
-    will be used for the classification zones.
-  Returns:
-    ee.FeatureCollection (GeometryCollection)
-*/
-function getZonesBoundaries(boundaryGeometry, projectionImage) {
-  //getZonesBoundaries
-  var zoneSize = 56000
-  projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
-  print(projectionImage)
-  boundaryGeometry = ee.FeatureCollection(boundaryGeometry).geometry().buffer(ee.Number(zoneSize).divide(2))
-  var projection = ee.Image(projectionImage).projection()
-  return ee.Image.random()
-    .multiply(10000000)
-    .toInt()
-    .reduceToVectors({
-      crs: projection,
-      scale: zoneSize,
-      geometry: boundaryGeometry,
-      geometryInNativeProjection: true
-    })
-}
-exports.getZonesBoundaries = getZonesBoundaries
+// /*
+//   getZonesBoundaries:
+//     Creates a collection of zoneSize * zoneSize geometries in a given projection,
+//    which will use as the areas in which we performa a classification. Returns as
+//    many geometries as cover a given zone.
+//
+//   Parameters:
+//     - boundaryGeometry (ee.Geometry): The geometry to which we will limit ourselves.
+//     - [zoneSize] (Number, default: 56000): Size, in meters, of each side of the classification zone.
+//     - [projectionImage] (ee.Image, default: Atlas 2013)]: The image whose projection
+//     will be used for the classification zones.
+//   Returns:
+//     ee.FeatureCollection (GeometryCollection)
+// */
+// function getZonesBoundaries(boundaryGeometry, projectionImage) {
+//   //getZonesBoundaries
+//   var zoneSize = 56000
+//   projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
+//   print(projectionImage)
+//   boundaryGeometry = ee.FeatureCollection(boundaryGeometry).geometry().buffer(ee.Number(zoneSize).divide(2))
+//   var projection = ee.Image(projectionImage).projection()
+//   return ee.Image.random()
+//     .multiply(10000000)
+//     .toInt()
+//     .reduceToVectors({
+//       crs: projection,
+//       scale: zoneSize,
+//       geometry: boundaryGeometry,
+//       geometryInNativeProjection: true
+//     })
+// }
+// exports.getZonesBoundaries = getZonesBoundaries
 
 
 
@@ -159,13 +178,15 @@ Map.addLayer(geometry)
 
 var atlas_2000 = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
 var atlas_2013 = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')//.clip(geometry)
+var labelProjection = atlas_2013.projection()
 // var atlasGeometry = atlas_2000.geometry()
-var zones = getZonesBoundaries(geometry)
+// var zones = getZonesBoundaries(geometry)
 
 
 var atlasV2 = ee.Image('users/svangordon/conference/atlas_v2/classify/2013')//.clip(geometry)
 // sample(region, scale, projection, factor, numPixels, seed, dropNulls, tileScale)
-var pixels = getPixels(geometry, atlas_2000)
+// var pixels = getPixels(geometry, atlas_2000)
+var pixels = getAtlasGeometries(geometry, 'polygon', atlas_2000)
 var pixelsWithLabels = pixels.map(function(pixel) {
   var centroid = pixel.centroid(5)
   var sampledAtlasV2 = atlasV2.sampleRegions({
@@ -179,6 +200,8 @@ var pixelsWithLabels = pixels.map(function(pixel) {
 })
 print(pixelsWithLabels.first())
 
+print('pwl ag hist', pixelsWithLabels.aggregate_histogram('classification'))
+
 // var pixelGeometry = pixels.geometry().dissolve(5)
 // Map.addLayer(pixelGeometry, {color: 'green'}, 'pixelGeometry')
 
@@ -186,9 +209,19 @@ var pixelImage = pixelsWithLabels.reduceToImage(['classification'], ee.Reducer.m
   .toInt()
   .clip(geometry)
 
+var pixelImageReproj = pixelImage
+  .changeProj(pixelImage.projection(), labelProjection)
+  // .reproject({
+  //   crs: labelProjection,
+  //   scale: 2000
+  // })
+print('pixelImage', pixelImage)
+print('pixelImageReproj', pixelImageReproj)
+print('pixelImageReproj proj', pixelImageReproj.projection())
 displayClassification(atlasV2.clip(geometry), 'atlasV2_2013')
 displayClassification(atlas_2013.clip(geometry), 'atlas_2013')
 displayClassification(pixelImage.clip(geometry), 'pixelImage')
+displayClassification(pixelImageReproj.clip(geometry), 'pixelImageReproj')
 
 // Get statistics for the two images
 
@@ -202,9 +235,9 @@ function getImageHistogram(image, geometry, scale, pixelArea) {
       reducer: ee.Reducer.frequencyHistogram(),
       geometry: geometry,
       maxPixels: 1e13,
-      scale: scale,
+      // scale: scale,
       tileScale: 16,
-      crs: atlas_2000.projection()
+      // crs: image.projection()
     })
     .get('classification')
   var classAreas = ee.Dictionary(pixelCounts)
@@ -219,11 +252,11 @@ function displayHistogram(classAreas, title) {
   // print('chartInput', classAreas)
   var atlasClassMetadata = require('users/svangordon/lulc-conference:atlasClassMetadata')
   var chartLabels = atlasClassMetadata.nameDictionaryFrench
-  chartLabels = chartLabels.select(classAreas.propertyNames()).getInfo()
+  // chartLabels = chartLabels.select(classAreas.propertyNames()).getInfo()
   // chartLabels = chartLabels
   // print(chartLabels)
 
-  var areaChart = ui.Chart.feature.byProperty(classAreas, chartLabels)
+  var areaChart = ui.Chart.feature.byProperty(classAreas/*, chartLabels*/)
     .setOptions({
         vAxis: {
           title: 'km^2',
@@ -237,11 +270,21 @@ function displayHistogram(classAreas, title) {
   print(title, areaChart)
 }
 
+Map.addLayer(pixels, {color: 'green'}, 'pixels')
 var atlasAreas = getImageHistogram(atlas_2013, geometry, 2000, 4)
-var v2Areas = getImageHistogram(pixelImage, geometry, 2000, 4)
+// I'm not sure why this wouldn't be exactly the same, but
+var reprojV2Areas = getImageHistogram(pixelImageReproj, geometry, 2000, 4)
+var noReprojV2Areas = getImageHistogram(pixelImage, geometry, 2000, 4)
+var v2Areas = pixelsWithLabels.aggregate_histogram('classification')
+v2Areas = ee.Dictionary(v2Areas).map(function(key, value) {
+  return ee.Number(value).multiply(4)
+})
+v2Areas = ee.Feature(null, v2Areas)
+print('pixel image projection', pixelImage.projection())
 
 print('atlasAreas', atlasAreas)
 print('v2Areas', v2Areas)
+print('reprojV2Areas', reprojV2Areas)
 
 var atlasSum = atlasAreas.toDictionary().values().reduce(ee.Reducer.sum())
 var v2Sum = v2Areas.toDictionary().values().reduce(ee.Reducer.sum())
@@ -264,3 +307,5 @@ print('difference', ee.Number(v2Sum).subtract(atlasSum))
 
 displayHistogram(atlasAreas, 'atlasAreas')
 displayHistogram(v2Areas, 'v2Areas')
+displayHistogram(reprojV2Areas, 'reprojV2Areas')
+// displayHistogram(noReprojV2Areas, 'noReprojV2Areas')
