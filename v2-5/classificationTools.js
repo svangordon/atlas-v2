@@ -89,34 +89,30 @@ exports.toPoint = toPoint
 
 /*
   TimeFilter
-    Constructor that returns a function to create time filter. The returned function
-  will take a year and return a filter as described by the inputs to the constructor.
-  Gets an `or` filter from startDate to endDate, for each of the year in the years
-  relative to the start and end dates.
-  Parameters:
-    - startDate (ee.String|String)
-    - endDate (ee.String|String)
-    - years (List, default: [-1, 0, 1]): List of years, relative to the start and end dates,
-  to create filters for.
+    In an effort to simplify things, this now only takes months. You give it a
+
 */
 function TimeFilter(startDateList, endDateList, yearsList) {
   // Assign default years list value
-  yearsList = ee.List(yearsList || [-1, 0, 1])
+  yearsList = ee.List(yearsList || [-1, 1])
   // Cast start and end date lists
   startDateList = ee.List(startDateList)
   endDateList = ee.List(endDateList)
 
-  // Cat 0 to the start and end dates list, making the year offset optional
-  startDateList = startDateList.cat([0])
-  endDateList = endDateList.cat([0])
-
   var startMonth = startDateList.get(0)
   var startDay = startDateList.get(1)
-  var startYearOffset = startDateList.get(2)
+  var startDoy = ee.Date.fromYMD(1, startMonth, startDay)
+    .getRelative('day', 'year')
+    .add(1)
+  var startYearOffset = yearsList.get(0)
+  // print('startDoy', startDoy)
 
   var endMonth = endDateList.get(0)
   var endDay = endDateList.get(1)
-  var endYearOffset = endDateList.get(2)
+  var endDoy = ee.Date.fromYMD(1, endMonth, endDay)
+    .getRelative('day', 'year')
+    .add(1)
+  var endYearOffset = yearsList.get(1)
 
   // datesArray = ee.List(datesArray || [9, 15, 11, 15])
   // var startMonth = datesArray.get(0)
@@ -126,6 +122,23 @@ function TimeFilter(startDateList, endDateList, yearsList) {
   // startDate = ee.Date(startDate)
   // endDate = ee.Date(endDate)
   function getTimeFilter(originYear) {
+    originYear = ee.Number(originYear)
+    var startYear = originYear.add(startYearOffset)
+    var endYear = originYear.add(endYearOffset)
+    // var filters = ee.List.sequence(startYear, endYear).map(function(filterYear) {
+    //
+    // })
+    //
+    //
+    // var startDate = ee.Date.fromYMD(startYear, startMonth, startDay)
+    // var endDate = ee.Date.fromYMD(endYear, endMonth, endDay)
+    // var filterRange = ee.Filter.date()
+    return ee.Filter.and(
+      // ee.Filter.calendarRange(startMonth, endMonth, 'month'),
+      ee.Filter.calendarRange(startDoy, endDoy, 'day_of_year'),
+      ee.Filter.calendarRange(startYear, endYear, 'year')
+    )
+
     var dateFilters = yearsList.map(function(filterYearOffset) {
       var startDate = ee.Date.fromYMD(ee.Number(originYear).add(filterYearOffset).add(startYearOffset), startMonth, startDay)
       var endDate = ee.Date.fromYMD(ee.Number(originYear).add(filterYearOffset).add(endYearOffset), endMonth, endDay)
@@ -139,3 +152,10 @@ function TimeFilter(startDateList, endDateList, yearsList) {
   return getTimeFilter
 }
 exports.TimeFilter = TimeFilter
+var timeFilter = TimeFilter([9, 15], [11, 15])
+print(timeFilter)
+print(timeFilter(2013))
+var filter = timeFilter(2013)
+var imageCollection = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY");
+var ls7 = ee.ImageCollection("LANDSAT/LE07/C01/T1_RT");
+print(imageCollection.filter(filter))
