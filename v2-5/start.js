@@ -7,12 +7,28 @@ var displayClassification = classificationTools.displayClassification
 var getAtlasGeometries = classificationTools.getAtlasGeometries
 var toPoint = classificationTools.toPoint
 var TimeFilter = classificationTools.TimeFilter
-
+var ecowasBoundary = classificationTools.ecowasBoundary
 
 var labelImage =  ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
 var labelProjection =  labelImage.projection()
 
-var timeFilter = TimeFilter([9, 15], [11, 15])
+var timeFilterFunction = TimeFilter([9, 15], [11, 15])
+
+
+function Basemap(timeFilterFunction, collectionMapFunction) {
+
+}
+
+function getLandsatImage(geometry, year, landsatCollection) {
+  var startDate = ee.Date.fromYMD(year, 9, 15)
+  var endDate = ee.Date.fromYMD(year, 11, 15)
+  var dateFilter = getTimeFilter(startDate, endDate)
+  return landsatCollection.filterBounds(geometry)
+    .filter(dateFilter)
+    .map(maskLandsat)
+    .median()
+    .clip(geometry)
+}
 
 function getTrainingInputs(basemap, labels, samplingGeometry, samplingScale) {
   // Use the or operator (which is ||) to set a default value for sampling scale

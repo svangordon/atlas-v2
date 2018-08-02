@@ -78,29 +78,48 @@ var atlas_2013 = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')/
 var labelProjection = atlas_2013.projection()
 // var atlasGeometry = atlas_2000.geometry()
 // var zones = getZonesBoundaries(geometry)
+function getAffineTransform(image) {
+  var projection = image.projection();
+  var json = ee.Dictionary(ee.Algorithms.Describe(projection));
+  return ee.List(json.get('transform'));
+}
+print(getAffineTransform(atlas_2013))
+var atlasAffine = getAffineTransform(atlas_2013)
 
+var atlasV2_30m = ee.Image('users/svangordon/conference/atlas_v2/classify/2013')//.clip(geometry)
 
-var atlasV2 = ee.Image('users/svangordon/conference/atlas_v2/classify/2013')//.clip(geometry)
+var atlasV2_2km = atlasV2_30m.reproject(labelProjection, atlasAffine)
 
+// displayClassification(reducedV2, 'reduced resolution v2')
 var pixels = getAtlasGeometries(geometry, 'polygon', atlas_2000)
+print('pxl proj', pixels.geometry().projection())
 var pixelsWithLabels = pixels.map(function(pixel) {
   var centroid = pixel.centroid(5)
-  var sampledAtlasV2 = atlasV2.sampleRegions({
-    collection: centroid,
-    scale: 30
-  }).first()
+  var sampledAtlasV2 = atlasV2_30m
+    // .clip(pixel)
+    // .reproject(pixels.geometry().projection(), null, 30)
+    .sampleRegions({
+      collection: centroid,
+      scale: 30
+    }).first()
   sampledAtlasV2 = ee.FeatureCollection(sampledAtlasV2)
   return pixel.set('classification', sampledAtlasV2.get('b1'))
 })
 
 var pixelImage = pixelsWithLabels.reduceToImage(['classification'], ee.Reducer.first())
   .toInt()
-  .clip(geometry)
-  .reproject(labelProjection, null, 2000)
+  // .clip(geometry)
+  // .reproject(labelProjection, null, 2000)
 
-displayClassification(atlasV2.clip(geometry), 'atlasV2_2013')
+// var translated = pixelImage.translate(0, -1, 'pixels')
+var atlasV2_2km = pixelImage
+
+displayClassification(atlasV2_30m.clip(geometry), 'atlasV2_30m 2013')
 displayClassification(atlas_2013.clip(geometry), 'atlas_2013')
-displayClassification(pixelImage.clip(geometry), 'atlasV2 2km 2013')
+displayClassification(atlasV2_2km.clip(geometry), 'atlasV2_2km 2013')
+
+// displayClassification(pixelImage.clip(geometry), 'pixel image 2km 2013')
+// displayClassification(translated, 'translated')
 
 // Get statistics for the two images
 
@@ -108,15 +127,17 @@ function getImageHistogram(image, geometry, pixelArea) {
   var pixelCounts = image
     .rename('classification')
     .reduceRegion({
-      reducer: ee.Reducer.frequencyHistogram(),
+      reducer: ee.Reducer.frequencyHistogram().unweighted(),
       geometry: geometry,
       maxPixels: 1e13,
-      // scale: scale,
+      scale: 2000,
+      // crsTransform: getAffineTransform(atlas_2013),
       tileScale: 16,
       // crs: image.projection()
     })
     .get('classification')
   var classAreas = ee.Dictionary(pixelCounts)
+    .remove(['null'], true)
     .map(function(key, value) {
       return ee.Number(value).multiply(pixelArea)
     })
@@ -146,9 +167,15 @@ function displayHistogram(classAreas, title) {
 
 Map.addLayer(pixels, {color: 'green'}, 'pixels')
 var atlasAreas = getImageHistogram(atlas_2013, geometry, 4)
-var v2Areas2km = getImageHistogram(pixelImage, geometry, 4)
-var v2Areas30m = getImageHistogram(atlasV2, geometry, 0.0009)
-
+var v2Areas2km = getImageHistogram(atlasV2_2km, geometry, 4)
+var v2Areas30m = getImageHistogram(atlasV2_30m, geometry, 0.0009)
+var pixelHisto = pixelsWithLabels.aggregate_histogram('classification')
+pixelHisto = ee.Dictionary(pixelHisto)
+  .map(function(key, value) {
+    return ee.Number(value).multiply(4)
+  })
+pixelHisto = ee.Feature(null, pixelHisto)
+print('pixelHisto', pixelHisto)
 // print('pixel image projection', pixelImage.projection())
 
 print('atlasAreas', atlasAreas)
@@ -160,10 +187,11 @@ var sum30m = v2Areas30m.toDictionary().values().reduce(ee.Reducer.sum())
 
 print('atlasSum', atlasSum)
 print('sum2km', sum2km)
-print('sum30m', sum30m)
+// print('sum30m', sum30m)
 print('2km - atlas difference', ee.Number(sum2km).subtract(atlasSum))
-print('30m - atlas difference', ee.Number(sum30m).subtract(atlasSum))
+// print('30m - atlas difference', ee.Number(sum30m).subtract(atlasSum))
 
 displayHistogram(atlasAreas, 'atlasAreas')
 displayHistogram(v2Areas2km, 'v2Areas2km')
-displayHistogram(v2Areas30m, 'v2Areas30m')
+displayHistogram(pixelHisto, 'v2Areas2km, pixel histo')
+// displayHistogram(v2Areas30m, 'v2Areas30m')
