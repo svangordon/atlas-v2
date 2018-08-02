@@ -104,50 +104,21 @@ function TimeFilter(startDateList, endDateList, yearsList) {
   var startDoy = ee.Date.fromYMD(1, startMonth, startDay)
     .getRelative('day', 'year')
     .add(1)
-  var startYearOffset = yearsList.get(0)
-  // print('startDoy', startDoy)
 
   var endMonth = endDateList.get(0)
   var endDay = endDateList.get(1)
   var endDoy = ee.Date.fromYMD(1, endMonth, endDay)
     .getRelative('day', 'year')
     .add(1)
-  var endYearOffset = yearsList.get(1)
 
-  // datesArray = ee.List(datesArray || [9, 15, 11, 15])
-  // var startMonth = datesArray.get(0)
-  // var startDay = datesArray.get(1)
-  // var endMonth = datesArray.get(2)
-  // var endDay = datesArray.get(3)
-  // startDate = ee.Date(startDate)
-  // endDate = ee.Date(endDate)
   function getTimeFilter(originYear) {
     originYear = ee.Number(originYear)
     var startYear = originYear.add(startYearOffset)
     var endYear = originYear.add(endYearOffset)
-    // var filters = ee.List.sequence(startYear, endYear).map(function(filterYear) {
-    //
-    // })
-    //
-    //
-    // var startDate = ee.Date.fromYMD(startYear, startMonth, startDay)
-    // var endDate = ee.Date.fromYMD(endYear, endMonth, endDay)
-    // var filterRange = ee.Filter.date()
     return ee.Filter.and(
-      // ee.Filter.calendarRange(startMonth, endMonth, 'month'),
       ee.Filter.calendarRange(startDoy, endDoy, 'day_of_year'),
       ee.Filter.calendarRange(startYear, endYear, 'year')
     )
-
-    var dateFilters = yearsList.map(function(filterYearOffset) {
-      var startDate = ee.Date.fromYMD(ee.Number(originYear).add(filterYearOffset).add(startYearOffset), startMonth, startDay)
-      var endDate = ee.Date.fromYMD(ee.Number(originYear).add(filterYearOffset).add(endYearOffset), endMonth, endDay)
-      return ee.Filter.date(startDate, endDate)
-    })
-    return dateFilters.slice(1)
-      .iterate(function(filter, accum) {
-        return ee.Filter.or(accum, filter)
-      }, dateFilters.get(0))
   }
   return getTimeFilter
 }
