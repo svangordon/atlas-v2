@@ -123,10 +123,21 @@ function TimeFilter(startDateList, endDateList, yearsList) {
   return getTimeFilter
 }
 exports.TimeFilter = TimeFilter
-var timeFilter = TimeFilter([9, 15], [11, 15])
-print(timeFilter)
-print(timeFilter(2013))
-var filter = timeFilter(2013)
-var imageCollection = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY");
-var ls7 = ee.ImageCollection("LANDSAT/LE07/C01/T1_RT");
-print(imageCollection.filter(filter))
+// var timeFilter = TimeFilter([9, 15], [11, 15])
+// print(timeFilter)
+// print(timeFilter(2013))
+// var filter = timeFilter(2013)
+// var imageCollection = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY");
+// var ls7 = ee.ImageCollection("LANDSAT/LE07/C01/T1_RT");
+// print(imageCollection.filter(filter))
+
+function ecowasBoundary(countryName) {
+  // Load Country of Interest
+  var ecowas = ee.FeatureCollection('users/svangordon/ecowas')
+  print(ecowas.aggregate_histogram('NAME'))
+  var geometry = ecowas.filter(ee.Filter.eq('NAME', 'Burkina Faso'))
+    .geometry()
+    .convexHull()
+  return geometry
+}
+exports.ecowasBoundary = ecowasBoundary

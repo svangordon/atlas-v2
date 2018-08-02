@@ -12,7 +12,7 @@ var TimeFilter = classificationTools.TimeFilter
 var labelImage =  ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
 var labelProjection =  labelImage.projection()
 
-
+var timeFilter = TimeFilter([9, 15], [11, 15])
 
 function getTrainingInputs(basemap, labels, samplingGeometry, samplingScale) {
   // Use the or operator (which is ||) to set a default value for sampling scale

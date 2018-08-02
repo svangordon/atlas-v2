@@ -100,7 +100,7 @@ var pixelImage = pixelsWithLabels.reduceToImage(['classification'], ee.Reducer.f
 
 displayClassification(atlasV2.clip(geometry), 'atlasV2_2013')
 displayClassification(atlas_2013.clip(geometry), 'atlas_2013')
-displayClassification(pixelImage.clip(geometry), 'pixelImage')
+displayClassification(pixelImage.clip(geometry), 'atlasV2 2km 2013')
 
 // Get statistics for the two images
 
@@ -128,37 +128,42 @@ function displayHistogram(classAreas, title) {
   // print('chartInput', classAreas)
   var atlasClassMetadata = require('users/svangordon/lulc-conference:atlasClassMetadata')
   var chartLabels = atlasClassMetadata.nameDictionaryFrench
-  chartLabels = chartLabels.select(classAreas.propertyNames()).getInfo()
-
-  var areaChart = ui.Chart.feature.byProperty(classAreas, chartLabels)
-    .setOptions({
-        vAxis: {
-          title: 'km^2',
-          // scaleType: 'log',
-          minValue: 0
-        },
-        hAxis: {
-          title: 'Class'
-        }
-      })
-  print(title, areaChart)
+  chartLabels = chartLabels.select(classAreas.propertyNames()).evaluate(function(chartLabels) {
+    var areaChart = ui.Chart.feature.byProperty(classAreas, chartLabels)
+      .setOptions({
+          vAxis: {
+            title: 'km^2',
+            // scaleType: 'log',
+            minValue: 0
+          },
+          hAxis: {
+            title: 'Class'
+          }
+        })
+    print(title, areaChart)
+  })
 }
 
 Map.addLayer(pixels, {color: 'green'}, 'pixels')
 var atlasAreas = getImageHistogram(atlas_2013, geometry, 4)
-var v2Areas = getImageHistogram(pixelImage, geometry, 4)
+var v2Areas2km = getImageHistogram(pixelImage, geometry, 4)
+var v2Areas30m = getImageHistogram(atlasV2, geometry, 0.0009)
 
 // print('pixel image projection', pixelImage.projection())
 
 print('atlasAreas', atlasAreas)
-print('v2Areas', v2Areas)
+print('v2Areas2km', v2Areas2km)
 
 var atlasSum = atlasAreas.toDictionary().values().reduce(ee.Reducer.sum())
-var v2Sum = v2Areas.toDictionary().values().reduce(ee.Reducer.sum())
+var sum2km = v2Areas2km.toDictionary().values().reduce(ee.Reducer.sum())
+var sum30m = v2Areas30m.toDictionary().values().reduce(ee.Reducer.sum())
 
 print('atlasSum', atlasSum)
-print('v2Sum', v2Sum)
-print('difference', ee.Number(v2Sum).subtract(atlasSum))
+print('sum2km', sum2km)
+print('sum30m', sum30m)
+print('2km - atlas difference', ee.Number(sum2km).subtract(atlasSum))
+print('30m - atlas difference', ee.Number(sum30m).subtract(atlasSum))
 
 displayHistogram(atlasAreas, 'atlasAreas')
-displayHistogram(v2Areas, 'v2Areas')
+displayHistogram(v2Areas2km, 'v2Areas2km')
+displayHistogram(v2Areas30m, 'v2Areas30m')
