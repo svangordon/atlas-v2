@@ -86,7 +86,8 @@ function getAffineTransform(image) {
 print(getAffineTransform(atlas_2013))
 var atlasAffine = getAffineTransform(atlas_2013)
 
-var atlasV2_30m = ee.Image('users/svangordon/conference/atlas_v2/classify/2013')//.clip(geometry)
+// var atlasV2_30m = ee.Image('users/svangordon/conference/atlas_v2/classify/2013')//.clip(geometry)
+var atlasV2_30m = ee.Image('users/svangordon/3212523/classify/2013')//.clip(geometry)
 
 var atlasV2_2km = atlasV2_30m.reproject(labelProjection, atlasAffine)
 
