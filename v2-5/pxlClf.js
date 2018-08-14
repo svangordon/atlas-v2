@@ -1,43 +1,101 @@
 var cloud_masks = require('users/fitoprincipe/geetools:cloud_masks');
 var maskLandsat = cloud_masks.landsatSR()
 
-var toolPath = 'users/svangordon/default:classificationTools'
-var classificationTools = require(toolPath)
-var displayClassification = classificationTools.displayClassification
-var getAtlasGeometries = classificationTools.getAtlasGeometries
-var toPoint = classificationTools.toPoint
-var TimeFilter = classificationTools.TimeFilter
-var ecowasBoundary = classificationTools.ecowasBoundary
+/*
+  Functions:
+    * displayClassification
+    * displayLandsat7SR
+    * getTrainingInputs (sampleCollection)
+    * trainAlgorithm    (trainClassifier)
+*/
 
-var labelImage =  ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
-var labelProjection =  labelImage.projection()
+function displayClassification(classificationImage, layerName) {
+  // Cast classificationImage to Image
+  classificationImage = ee.Image(classificationImage)
 
-var timeFilterFunction = TimeFilter([9, 15], [11, 15])
+  var atlasPalette = [
+    "8400a8", // Forest / Forêt
+    "8bad8b", // Savanna / Savane
+    "000080", // Wetland - floodplain / Prairie marécageuse - vallée inondable
+    "ffcc99", // Steppe / Steppe
+    "808000", // Plantation / Plantation
+    "33cccc", // Mangrove / Mangrove
+    "ffff96", // Agriculture / Zone de culture
+    "3366ff", // Water bodies / Plans d'eau
+    "ff99cc", // Sandy area / surfaces sableuses
+    "969696", // Rocky land / Terrains rocheux
+    "a87000", // Bare soil / Sols dénudés
+    "ff0000", // Settlements / Habitations
+    "ccff66", // Irrigated agriculture / Cultures irriguées
+    "a95ce6", // Gallery forest and riparian forest / Forêt galerie et formation ripicole
+    "d296e6", // Degraded forest / Forêt dégradée
+    "a83800", // Bowe / Bowé
+    "f5a27a", // Thicket / Fourré
+    "ebc961", // Agriculture in shallows and recession / Cultures des bas-fonds et de décrue
+    "28734b", // Woodland / Forêt claire
+    "ebdf73", // Cropland and fallow with oil palms / Cultures et jachère sous palmier à huile
+    "beffa6", // Swamp forest / Forêt marécageuse
+    "a6c28c", // Sahelian short grass savanna / Savane sahélienne
+    "0a9696", // Herbaceous savanna / Savane herbacée
+    "749373", // Shrubland / Zone arbustive
+    "505050", // Open mine / Carrière
+    "FFFFFF"  // Cloud / Nuage
+  ]
+  var atlasClasses = [1,2,3,4,6,7,8,9,10,11,12,13,14,15,21,22,23,24,25,27,28,29,31,32,78,99]
+  var remappedImage = classificationImage.remap(atlasClasses, ee.List.sequence(1, 26))
+  classificationImage = classificationImage.addBands(remappedImage)
+  Map.addLayer(classificationImage, {min:1, max:26, palette: atlasPalette, bands:'remapped'}, layerName)
+}
+exports.displayClassification = displayClassification
 
 /*
-  Basemap constructor. The function that it returns takes a geometry and a year
-  and returns an image.
+  getLabelLocations
+    Create a collection of ~~center~~points at a given projection. Used for creating
+  the collection from which we will sample our basemap.
+
+  Parameters:
+    - zoneGeometry (ee.Geometry): The geometry within which we will create our collection of points.
+    - [projectionImage] (ee.Image, default: Atlas 2013): The image whose projection
+    we will use for the collection of points.
+  Returns:
+    ee.FeatureCollection (GeometryCollection)
+
 */
-function Basemap(filterCollection, imageCollection, mapCollection, collectionReducer) {
-
-  function getBaseMap(geometry, year) {
-    return imageCollection
-      .filterBounds(geometry)
-      .filter(filterCollection(year))
-      .map(mapCollection)
-  }
+function getAtlasGeometries(zoneGeometry, labelImage, geometryType) {
+  var labelProjection = ee.Image(labelImage).projection()
+  zoneGeometry = ee.FeatureCollection(zoneGeometry).geometry()
+  return ee.Image
+    .random()
+    .multiply(100000)
+    .toInt()
+    .reduceToVectors({
+      crs: labelProjection,
+      geometry: zoneGeometry,
+      // scale: labelProjection.nominalScale(),
+      geometryInNativeProjection: true,
+      geometryType: geometryType
+    })
+    // .map(function(feature) {
+    //   var centroid = feature.centroid(5, labelProjection)
+    //   return centroid
+    // })
 }
+exports.getAtlasGeometries = getAtlasGeometries
 
-function getLandsatImage(geometry, year, landsatCollection) {
-  var startDate = ee.Date.fromYMD(year, 9, 15)
-  var endDate = ee.Date.fromYMD(year, 11, 15)
-  var dateFilter = getTimeFilter(startDate, endDate)
-  return landsatCollection.filterBounds(geometry)
-    .filter(dateFilter)
-    .map(maskLandsat)
-    .median()
-    .clip(geometry)
+
+/*
+  toPoint
+    Takes a feature with `longitude` and `latitude` properties, strips those properties,
+  and converts them into a geometry. Used so that features have geometries after a
+  `.sampleRegions` call.
+*/
+function toPoint(feature) {
+  feature = ee.Feature(feature)
+  return ee.Feature(
+    ee.Geometry.Point([feature.get('longitude'), feature.get('latitude')]),
+    feature.toDictionary().remove(['longitude', 'latitude']))
 }
+exports.toPoint = toPoint
 
 function getTrainingInputs(basemap, labels, samplingGeometry, samplingScale) {
   // Use the or operator (which is ||) to set a default value for sampling scale
@@ -111,7 +169,31 @@ function getZonesBoundaries(boundaryGeometry, projectionImage) {
 }
 exports.getZonesBoundaries = getZonesBoundaries
 
-
+/*
+  getTimeFilter
+    Gets an `or` filter from startDate to endDate, for each of the year in the years
+  relative to the start and end dates.
+  Parameters:
+    - startDate (ee.String|String)
+    - endDate (ee.String|String)
+    - years (List, default: [-1, 0, 1]): List of years, relative to the start and end dates,
+  to create filters for.
+*/
+function getTimeFilter(startDate, endDate, years) {
+  // ditto
+  years = ee.List(years || [-1, 0, 1])
+  startDate = ee.Date(startDate)
+  endDate = ee.Date(endDate)
+  var dateFilters = years.map(function(year) {
+    return ee.Filter.date(startDate.advance(year, 'year'), endDate.advance(year, 'year'))
+  })
+  return dateFilters.slice(1)
+  .iterate(function(filter, accum) {
+    return ee.Filter.or(accum, filter)
+  }, dateFilters.get(0))
+}
+exports.getTimeFilter = getTimeFilter
+//
 // /*
 //   maskLandsat
 //     Masks a single Landsat image, and returns only bands starting with 'B' (ie,
@@ -156,7 +238,7 @@ function getLandsatImage(geometry, year, landsatCollection) {
     .filter(dateFilter)
     .map(maskLandsat)
     .median()
-    .clip(geometry)
+    // .clip(geometry)
 }
 exports.getLandsatImage = getLandsatImage
 
@@ -168,7 +250,7 @@ function classifyZone(classificationZone) {
   // Label image: change label image here
   var atlas_2000 = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
   var atlas_2013 = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
-  var labelImage = atlas_2013
+  var labelImage = ee.Image(atlas_2013)
 
   // Training and classification years
   var trainingYear = 2013
@@ -187,11 +269,16 @@ function classifyZone(classificationZone) {
 
   // Set training and classification images
   var trainingImage = getLandsatImage(classificationZone.buffer(56000), trainingYear, trainingImageCollection);
-  var classificationImage = getLandsatImage(classificationZone, classificationYear, trainingImageCollection);
+  var classificationImage = getLandsatImage(classificationZone, classificationYear, trainingImageCollection).clip(classificationZone);
 
   // Create points that we will sample training image at. If using non-Atlas
   // data, change this to randomPoints
-  var labelLocations = getAtlasGeometries(classificationZone.buffer(56000), 'centroid', labelImage)
+  // var labelLocations = getAtlasGeometries(classificationZone.buffer(56000), labelImage, 'centroid')
+
+  // We've already generated these for burkina faso, so we'll use that instead
+  var labelLocations = ee.FeatureCollection('users/svangordon/burkinaCentroids')
+    .filterBounds(classificationZone.buffer(28000))
+
   var inputData = getTrainingInputs(trainingImage, labelImage, labelLocations)
     .filter(ee.Filter.notNull(trainingBands))
 
@@ -208,11 +295,18 @@ function classifyZone(classificationZone) {
     .clip(classificationZone)
     .toInt()
 
-  return ee.Algorithms.If(
-    inputData.size().gt(50),
-    classifiedImage,
-    fillImage
-  )
+
+
+  return classifiedImage
+
+  /*
+    This checks if the zone has enough pixels.
+  */
+  // return ee.Algorithms.If(
+  //   inputData.size().gt(50),
+  //   classifiedImage,
+  //   fillImage
+  // )
 }
 exports.classifyZone = classifyZone
 
@@ -221,6 +315,8 @@ function classifyCountry(currentZone, accum) {
   var output = ee.ImageCollection(accum).merge(ee.ImageCollection(classifiedZone))
   return output
 }
+
+
 
 // Load Country of Interest
 var ecowas = ee.FeatureCollection('users/svangordon/ecowas')
@@ -231,21 +327,45 @@ var geometry = ecowas.filter(ee.Filter.eq('NAME', 'Burkina Faso'))
 
 var atlas_2000 = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
 
-var centroids = getAtlasGeometries(geometry, 'centroid', atlas_2000)
-print('centroids', centroids.geometry().projection())
-print('labelProjection', labelProjection)
+var centroids = getAtlasGeometries(geometry, atlas_2000, 'centroid')
 
 
-var pixels = getAtlasGeometries(geometry, 'polygon', atlas_2000)
+function getPixels(zoneGeometry, projectionImage) {
+  zoneGeometry = ee.FeatureCollection(zoneGeometry).geometry()
+  projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
+  var projection = projectionImage.projection()
+  return ee.Image
+    .random()
+    .multiply(100000)
+    .toInt()
+    .reduceToVectors({
+      crs: projection,
+      geometry: zoneGeometry,
+      scale: projection.nominalScale(),
+      geometryInNativeProjection: true
+    })
+}
+
+var pixels = getPixels(geometry, atlas_2000)
+pixels = ee.FeatureCollection('users/svangordon/burkinaPixels')
+centroids = ee.FeatureCollection('users/svangordon/burkinaCentroids')
+Map.addLayer(pixels, {}, 'pixels')
+Map.addLayer(centroids, {}, 'centroids')
+// Export.table.toAsset(centroids, "burkinaCentroids")
+// Export.table.toAsset(pixels, "burkinaPixels")
 
 // var classifiedPixels = pixels.map(classifyZone)
 
 Map.addLayer(centroids)
 print('size', centroids.size())
 
+var singleZone = classifyZone(pixels.limit(1))
+print('singleZone', singleZone)
+displayClassification(singleZone, 'singleZone')
+
 var classifiedZones = pixels.iterate(classifyCountry, ee.ImageCollection([]))
 var classifiedImage = ee.ImageCollection(classifiedZones).min().selfMask()
-
+print('zones', ee.ImageCollection(classifiedZones).first())
 // geometry = geometry2
 // print('geometry', geometry)
 // Map.addLayer(geometry)
@@ -260,9 +380,11 @@ var classifiedImage = ee.ImageCollection(classifiedZones).min().selfMask()
 // var classifiedImage = ee.ImageCollection(classifiedZones).min().selfMask()
 // var accuracy = ee.ImageCollection(classifiedZones).aggregate_mean('accuracy')
 //
+print('classified',classifiedImage)
 Export.image.toAsset({
   image: classifiedImage,
   scale: 30,
+  // region: pixels.geometry().convexHull(0),
   region: pixels.geometry().dissolve(5),
   maxPixels: 1e13,
   description: 'classificationExportAsset',
@@ -281,4 +403,4 @@ Export.image.toAsset({
 // //})
 //
 //
-// // displayClassification(classifiedImage, 'classifiedImage')
+displayClassification(classifiedImage, 'classifiedImage')

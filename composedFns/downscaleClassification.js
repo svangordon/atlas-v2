@@ -165,7 +165,7 @@ function displayHistogram(classAreas, title) {
   })
 }
 
-Map.addLayer(pixels, {color: 'green'}, 'pixels')
+Map.addLayer(pixels, {color: 'green'}, 'pixels', false)
 var atlasAreas = getImageHistogram(atlas_2013, geometry, 4)
 var v2Areas2km = getImageHistogram(atlasV2_2km, geometry, 4)
 var v2Areas30m = getImageHistogram(atlasV2_30m, geometry, 0.0009)
