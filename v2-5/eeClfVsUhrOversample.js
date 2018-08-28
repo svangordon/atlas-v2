@@ -184,9 +184,9 @@ exports.trainAlgorithm = trainAlgorithm
   Returns:
     ee.FeatureCollection (GeometryCollection)
 */
-function getZonesBoundaries(boundaryGeometry, projectionImage) {
+function getZonesBoundaries(boundaryGeometry, zoneSize, projectionImage) {
   //getZonesBoundaries
-  var zoneSize = 56000
+  // var zoneSize = 28000
   projectionImage = projectionImage || ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
   print(projectionImage)
   boundaryGeometry = ee.FeatureCollection(boundaryGeometry).geometry().buffer(ee.Number(zoneSize).divide(2))
@@ -341,7 +341,7 @@ function classifyZone(classificationZone) {
   var imagesToSample = ee.ImageCollection(ee.List.repeat(trainingImage, samplesPerClass))
 
   // We now repeat the expanded image as many times as we want features for each class
-  var trainingData = ee.ImageCollection(
+  trainingData = ee.ImageCollection(
       ee.List.repeat(trainingImage.addBands(ee.Image.pixelLonLat()).addBands(labelImage), samplesPerClass)
     )
     .map(function(image) {
@@ -354,6 +354,7 @@ function classifyZone(classificationZone) {
       })
       .map(toPoint)
     }).flatten()
+    .merge(trainingData)
   // var data = inputData.merge(oversampledData)
 
   // Uses a random forest by default. Change trainAlgorithm function if you
@@ -400,20 +401,21 @@ function classifyCountry(currentZone, accum) {
 // Load Country of Interest
 var ecowas = ee.FeatureCollection('users/svangordon/ecowas')
 print(ecowas.aggregate_histogram('NAME'))
-// var geometry = ecowas.filter(ee.Filter.eq('NAME', 'Burkina Faso'))
+// var geometry = ecowas.filter(ee.Filter.eq('NAME', 'Gambie'))
 //   .geometry()
 //   .convexHull()
 // geometry = geometry2
-// var geometry = /* color: #98ff00 */ee.Geometry.Polygon(
-//         [[[-4.161071609705687, 11.478865784569892],
-//           [-4.062194656580687, 11.384642509296269],
-//           [-4.018249344080687, 11.497706672830285]]]);
+var geometry = /* color: #98ff00 */ee.Geometry.Polygon(
+        [[[-4.252395608928055, 11.498863123603766],
+          [-4.247245767619461, 11.56328243268591],
+          [-4.29170606425032, 11.564123318032388],
+          [-4.2934226780198514, 11.500881707207421]]]);
 print('geometry', geometry)
 Map.addLayer(geometry)
 
 // var atlas_2000 = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
 // var atlasGeometry = atlas_2000.geometry()
-var zones = getZonesBoundaries(geometry)
+var zones = getZonesBoundaries(geometry, 10000)
   // .filterBounds(atlasGeometry)
 
 function getPixels(zoneGeometry, projectionImage) {
@@ -432,7 +434,7 @@ function getPixels(zoneGeometry, projectionImage) {
     })
 }
 
-zones = getPixels(geometry)
+// zones = getPixels(geometry)
 Map.addLayer(zones)
 
 var classifiedZones = zones.iterate(classifyCountry, ee.ImageCollection([]))

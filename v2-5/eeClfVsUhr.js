@@ -1,11 +1,5 @@
-/*
-  Functions:
-    * displayClassification
-    * displayLandsat7SR
-    * getLabelLocations (getSamplingPoints)
-    * getTrainingInputs (sampleCollection)
-    * trainAlgorithm    (trainClassifier)
-*/
+var kedougouTable = ee.FeatureCollection("users/svangordon/tappanData/kedougou2012")
+var highlandsTable = ee.FeatureCollection("users/svangordon/tappanData/guineaHighland2013")
 
 function displayClassification(classificationImage, layerName) {
   // Cast classificationImage to Image
@@ -44,45 +38,32 @@ function displayClassification(classificationImage, layerName) {
   classificationImage = classificationImage.addBands(remappedImage)
   Map.addLayer(classificationImage, {min:1, max:26, palette: atlasPalette, bands:'remapped'}, layerName)
 }
-exports.displayClassification = displayClassification
 
-function createRgbImage(classificationImage) {
-  // Cast classificationImage to Image
-  classificationImage = ee.Image(classificationImage)
-
-  var atlasPalette = [
-    "8400a8", // Forest / Forêt
-    "8bad8b", // Savanna / Savane
-    "000080", // Wetland - floodplain / Prairie marécageuse - vallée inondable
-    "ffcc99", // Steppe / Steppe
-    "808000", // Plantation / Plantation
-    "33cccc", // Mangrove / Mangrove
-    "ffff96", // Agriculture / Zone de culture
-    "3366ff", // Water bodies / Plans d'eau
-    "ff99cc", // Sandy area / surfaces sableuses
-    "969696", // Rocky land / Terrains rocheux
-    "a87000", // Bare soil / Sols dénudés
-    "ff0000", // Settlements / Habitations
-    "ccff66", // Irrigated agriculture / Cultures irriguées
-    "a95ce6", // Gallery forest and riparian forest / Forêt galerie et formation ripicole
-    "d296e6", // Degraded forest / Forêt dégradée
-    "a83800", // Bowe / Bowé
-    "f5a27a", // Thicket / Fourré
-    "ebc961", // Agriculture in shallows and recession / Cultures des bas-fonds et de décrue
-    "28734b", // Woodland / Forêt claire
-    "ebdf73", // Cropland and fallow with oil palms / Cultures et jachère sous palmier à huile
-    "beffa6", // Swamp forest / Forêt marécageuse
-    "a6c28c", // Sahelian short grass savanna / Savane sahélienne
-    "0a9696", // Herbaceous savanna / Savane herbacée
-    "749373", // Shrubland / Zone arbustive
-    "505050", // Open mine / Carrière
-    "FFFFFF"  // Cloud / Nuage
-  ]
+/*
+  // The following was used to determine what the UHR classes should be remapped
+  // to so that they are in Atlas values.
   var atlasClasses = [1,2,3,4,6,7,8,9,10,11,12,13,14,15,21,22,23,24,25,27,28,29,31,32,78,99]
-  var remappedImage = classificationImage.remap(atlasClasses, ee.List.sequence(1, 26))
-  classificationImage = classificationImage.addBands(remappedImage)
-  return classificationImage.visualize({min:1, max:26, palette: atlasPalette, bands:'remapped'})
+  var uhrClasses = [ 1,  1,  15, 18, 18,  13, 13,  1, 13,  6,  6,  6,  11,  7]
+  print(ee.List(uhrClasses).map(function(el) {
+    return ee.List(atlasClasses).get(el)
+  }))
+*/
+// Result:
+var uhrAtlasValues = [2, 2, 22, 25, 25, 15, 15, 2, 15, 8, 8, 8, 13, 9]
+// Let's only deal with the highlands, bc it's 2013 and that's convenient
+// Reduce the table to an image, and then map its keys so that they match Atlas
+function uhrTableToImage(table) {
+  return table
+    .reduceToImage(['lc_carto'], ee.Reducer.first())
+    .remap(
+      [22, 23, 220, 13, 12, 150, 15, 16, 14, 80, 81, 21, 130, 90],
+      uhrAtlasValues
+    )
+    .rename('lc_carto')
 }
+var highlandsTappanImage = uhrTableToImage(highlandsTable)
+
+displayClassification(highlandsTappanImage, 'Highlands Tappan Image')
 
 /*
   getLabelLocations
@@ -284,22 +265,22 @@ function classifyZone(classificationZone) {
   // Label image: change label image here
   var atlas_2000 = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
   var atlas_2013 = ee.Image('users/svangordon/conference/atlas/swa_2013lulc_2km')
-  var labelImage = atlas_2013
+  var labelImage = atlas_2000
 
   // Training and classification years
-  var trainingYear = 2013
+  var trainingYear = 2000
   var classificationYear = 2013
 
   // Training bands: the names of the bands that we will classify on
   var ls7Bands = ['B1', 'B2', 'B3', 'B4', 'B5', 'B7']
   var ls8Bands = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B10', 'B11']
   var demBands = ['aspect', 'elevation', 'hillshade', 'slope']
-  var trainingBands = ls8Bands
+  var trainingBands = ls7Bands
   var classBand = 'b1'
 
   var landsat7Collection = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
   var landsat8Collection = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
-  var trainingImageCollection = landsat8Collection;
+  var trainingImageCollection = landsat7Collection;
 
   var bufferSize = 28000
 
@@ -408,8 +389,17 @@ print(ecowas.aggregate_histogram('NAME'))
 //         [[[-4.161071609705687, 11.478865784569892],
 //           [-4.062194656580687, 11.384642509296269],
 //           [-4.018249344080687, 11.497706672830285]]]);
+
+// Use the boundaries of the guineaHighland2013 classification
+// Highlands
+var geometry = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-12.436315655064732, 12.306094340879495],
+          [-12.392370342564732, 12.308777800737806],
+          [-12.395803570103794, 12.33527549348049],
+          [-12.437688946080357, 12.330579895026872]]]);
+
 print('geometry', geometry)
-Map.addLayer(geometry)
+Map.addLayer(geometry, {color: 'salmon'}, 'geometry')
 
 // var atlas_2000 = ee.Image('users/svangordon/conference/atlas/swa_2000lulc_2km')
 // var atlasGeometry = atlas_2000.geometry()
@@ -435,7 +425,10 @@ function getPixels(zoneGeometry, projectionImage) {
 zones = getPixels(geometry)
 Map.addLayer(zones)
 
-var classifiedZones = zones.iterate(classifyCountry, ee.ImageCollection([]))
+// var classifiedZones = zones.iterate(classifyCountry, ee.ImageCollection([]))
+
+var clasifiedZones = ee.ImageCollection(zones.map(classifyZone)).min().selfMask()
+
 var classifiedImage = ee.ImageCollection(classifiedZones).min().selfMask()
 var accuracy = ee.ImageCollection(classifiedZones).aggregate_mean('accuracy')
 print('non-batched accuracy', accuracy)
